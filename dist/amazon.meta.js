@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      2026.04.02.1
+// @version      26.42.1703
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
-// @downloadURL  https://gist.githubusercontent.com/rirh/2ec7da0d3eeeafaef645016d1a3cbe56/raw/amaon.user.js
-// @updateURL    https://gist.githubusercontent.com/rirh/2ec7da0d3eeeafaef645016d1a3cbe56/raw/amaon.user.js
+// @downloadURL  https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js
+// @updateURL    https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.meta.js
 // @include      *://amazon.*/*
 // @include      *://*.amazon.*/*
 // @grant        GM_addStyle

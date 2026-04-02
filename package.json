@@ -1,8 +1,9 @@
 {
   "name": "amazon-inline-editor",
-  "version": "0.1.0",
+  "version": "26.42.1703",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
