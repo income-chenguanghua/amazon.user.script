@@ -4,6 +4,7 @@ import {
     getConfigSelectorList,
     getConfigWatchSelectorList
 } from './utils.js';
+import { hasRelevantMutationsForSelector, hasRelevantNodesForSelector, nodeTouchesSelectorText } from './dom-watch-utils.js';
 
 export class TextObserver {
     constructor(dataList) {
@@ -137,54 +138,27 @@ export class TextObserver {
     }
 
     hasRelevantMutations(mutations) {
-        for (const mutation of mutations) {
-            if (!mutation || mutation.type !== 'childList') continue;
-            if (!this.hasRelevantNodes(mutation.addedNodes) && !this.hasRelevantNodes(mutation.removedNodes)) {
-                continue;
-            }
-            return true;
-        }
-        return false;
+        return hasRelevantMutationsForSelector(
+            mutations,
+            this.activeSelectorText,
+            '检查变更节点时选择器执行失败:'
+        );
     }
 
     hasRelevantNodes(nodeList) {
-        if (!nodeList || nodeList.length === 0 || !this.activeSelectorText) return false;
-
-        for (const node of nodeList) {
-            if (!(node instanceof Element)) continue;
-            if (node.id === 'tm-inline-editor' || node.id === 'tm-inline-notifications') continue;
-            if (typeof node.closest === 'function') {
-                if (node.closest('#tm-inline-editor') || node.closest('#tm-inline-notifications')) {
-                    continue;
-                }
-            }
-            if (this.nodeTouchesActiveSelector(node)) {
-                return true;
-            }
-        }
-
-        return false;
+        return hasRelevantNodesForSelector(
+            nodeList,
+            this.activeSelectorText,
+            '检查变更节点时选择器执行失败:'
+        );
     }
 
     nodeTouchesActiveSelector(node) {
-        if (!(node instanceof Element) || !this.activeSelectorText) return false;
-
-        try {
-            if (typeof node.matches === 'function' && node.matches(this.activeSelectorText)) {
-                return true;
-            }
-            if (typeof node.closest === 'function' && node.closest(this.activeSelectorText)) {
-                return true;
-            }
-            if (typeof node.querySelector === 'function' && node.querySelector(this.activeSelectorText)) {
-                return true;
-            }
-        } catch (error) {
-            console.warn('检查变更节点时选择器执行失败:', error);
-            return true;
-        }
-
-        return false;
+        return nodeTouchesSelectorText(
+            node,
+            this.activeSelectorText,
+            '检查变更节点时选择器执行失败:'
+        );
     }
 
     applyAll() {
