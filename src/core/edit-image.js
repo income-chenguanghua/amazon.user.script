@@ -55,12 +55,37 @@ export function findImageTriggerHost(element) {
     return element.parentElement instanceof HTMLElement ? element.parentElement : null;
 }
 
+export function findDialogTriggerHost(element) {
+    if (!(element instanceof HTMLElement)) return null;
+
+    const anchor = element.closest('a');
+    if (anchor instanceof HTMLAnchorElement && anchor.parentElement) {
+        return anchor;
+    }
+
+    return element;
+}
+
+export function applyDialogValueToElement(element, value) {
+    const nextValue = typeof value === 'string' ? value : String(value ?? '');
+
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+        element.value = nextValue;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+    }
+
+    element.textContent = nextValue;
+}
+
 export function makeEditable(manager, element, config) {
     if (!element || manager.editedElements.has(element)) return;
 
     const isImageElement = element instanceof HTMLImageElement;
     const isImage = (config && config.type === 'image' && isImageElement) || isImageElement;
-    const isInput = !isImage && (element instanceof HTMLInputElement ||
+    const usesDialogTrigger = !isImage && Boolean(config && config.editMode === 'dialog');
+    const isInput = !isImage && !usesDialogTrigger && (element instanceof HTMLInputElement ||
         element instanceof HTMLTextAreaElement ||
         element instanceof HTMLSelectElement);
     const noHighlight = Boolean(config && config.noHighlight);
@@ -69,6 +94,7 @@ export function makeEditable(manager, element, config) {
         element,
         isImage,
         isInput,
+        usesDialogTrigger,
         noHighlight,
         originalValue: extractElementValue(element),
         disabled: isInput ? element.disabled : undefined,
@@ -83,7 +109,10 @@ export function makeEditable(manager, element, config) {
         imageTriggerHostPosition: null,
         imageTriggerHostPositionAdjusted: false,
         imageTriggerClickHandler: null,
-        imageTriggerKeyHandler: null
+        imageTriggerKeyHandler: null,
+        dialogTrigger: null,
+        dialogTriggerHost: null,
+        dialogTriggerClickHandler: null
     };
 
     if (isImage) {
@@ -137,6 +166,47 @@ export function makeEditable(manager, element, config) {
 
         element.style.cursor = 'zoom-in';
         element.setAttribute('title', host ? '左键预览，点“换”角标替换图片' : '左键预览，右键替换图片');
+    } else if (usesDialogTrigger) {
+        const openTextDialog = (event) => {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') {
+                    event.stopImmediatePropagation();
+                }
+            }
+
+            const fieldName = config && config.name ? config.name : '内容';
+            const currentValue = extractElementValue(element);
+            const nextValue = window.prompt(`请输入新的${fieldName}：`, currentValue);
+            if (nextValue === null) return;
+
+            if (nextValue === currentValue) {
+                manager.notification.show(`${fieldName}未发生变化。`, 'info');
+                return;
+            }
+
+            applyDialogValueToElement(element, nextValue);
+            manager.notification.show(`${fieldName}已更新，点击“完成”保存。`, 'success');
+        };
+
+        const host = findDialogTriggerHost(element);
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'tm-inline-text-dialog-trigger';
+        trigger.textContent = config && config.dialogButtonLabel ? config.dialogButtonLabel : '改';
+        trigger.setAttribute('aria-label', `修改${config && config.name ? config.name : '内容'}`);
+        trigger.setAttribute('title', '点击弹窗修改');
+        trigger.addEventListener('click', openTextDialog, true);
+
+        if (host && host.parentNode) {
+            host.parentNode.insertBefore(trigger, host.nextSibling);
+            state.dialogTrigger = trigger;
+            state.dialogTriggerHost = host;
+            state.dialogTriggerClickHandler = openTextDialog;
+        }
+
+        element.dataset.tmInlineDialogEdit = '1';
     } else if (isInput) {
         element.disabled = false;
         element.readOnly = false;
@@ -158,6 +228,7 @@ export function restoreElements(manager) {
         if (!element) return;
         delete element.dataset.tmInlineEditing;
         element.removeAttribute('data-tm-inline-editing');
+        element.removeAttribute('data-tm-inline-dialog-edit');
         element.classList.remove('tm-inline-editing');
 
         if (state.isInput) {
@@ -198,6 +269,13 @@ export function restoreElements(manager) {
             } else {
                 element.removeAttribute('title');
             }
+        } else if (state.usesDialogTrigger) {
+            if (state.dialogTrigger) {
+                if (state.dialogTriggerClickHandler) {
+                    state.dialogTrigger.removeEventListener('click', state.dialogTriggerClickHandler, true);
+                }
+                state.dialogTrigger.remove();
+            }
         } else if (state.contentEditable === null || state.contentEditable === undefined) {
             element.removeAttribute('contenteditable');
         } else {
@@ -220,10 +298,14 @@ export function cleanupLooseEditingMarks(root = document) {
             if (!(node instanceof HTMLElement)) return;
             node.classList.remove('tm-inline-editing');
             node.removeAttribute('data-tm-inline-editing');
+            node.removeAttribute('data-tm-inline-dialog-edit');
             if (node.isContentEditable) {
                 node.removeAttribute('contenteditable');
                 node.contentEditable = 'inherit';
             }
+        });
+        scope.querySelectorAll('.tm-inline-text-dialog-trigger').forEach((node) => {
+            node.remove();
         });
     } catch (error) {
         console.warn('清理残留编辑标记失败:', error);

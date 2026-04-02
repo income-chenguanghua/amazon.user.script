@@ -211,6 +211,35 @@ export function injectEditorStyles() {
             outline: 2px solid rgba(14, 165, 233, 0.95);
             outline-offset: 2px;
         }
+        .tm-inline-text-dialog-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            margin-left: 6px;
+            padding: 0 8px;
+            border: none;
+            border-radius: 999px;
+            vertical-align: middle;
+            color: #ffffff;
+            background: linear-gradient(135deg, #198754, #157347);
+            box-shadow: 0 6px 14px rgba(21, 128, 61, 0.24);
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .tm-inline-text-dialog-trigger:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 8px 18px rgba(21, 128, 61, 0.3);
+        }
+        .tm-inline-text-dialog-trigger:focus {
+            outline: 2px solid rgba(14, 165, 233, 0.95);
+            outline-offset: 2px;
+        }
         #altImages .tm-inline-image-replace-trigger,
         li.imageThumbnail .tm-inline-image-replace-trigger {
             --tm-trigger-size: 16px;

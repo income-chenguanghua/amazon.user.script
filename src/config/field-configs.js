@@ -174,7 +174,9 @@ export const defaultFieldConfigs = [
     {
         name: '评论数',
         keySuffix: 'customer_review_count',
-        selector: '#acrCustomerReviewText'
+        selector: '#acrCustomerReviewText',
+        editMode: 'dialog',
+        dialogButtonLabel: '改'
     },
     {
         name: 'Business Name 标签',

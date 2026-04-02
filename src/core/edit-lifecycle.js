@@ -67,7 +67,7 @@ export function enterEditMode(manager) {
     if (elements.length === 0) {
         manager.notification.show('未找到可编辑的元素，请检查选择器配置。', 'warning');
     } else {
-        manager.notification.show('编辑模式已开启：可直接改文字；点击图片角标“换”可替换，左键预览保留。', 'info');
+        manager.notification.show('编辑模式已开启：可直接改文字；评论数点旁边“改”按钮编辑；点击图片角标“换”可替换，左键预览保留。', 'info');
     }
 }
 
@@ -171,8 +171,18 @@ export function handleAnchorClick(manager, event) {
     if (!manager.isEditing) return;
     const replaceTrigger = event.target && event.target.closest && event.target.closest('.tm-inline-image-replace-trigger');
     if (replaceTrigger) return;
+    const dialogTrigger = event.target && event.target.closest && event.target.closest('.tm-inline-text-dialog-trigger');
+    if (dialogTrigger) return;
     const anchor = event.target && event.target.closest('a');
     if (!anchor) return;
+    const containsDialogEditTarget = anchor.matches('[data-tm-inline-dialog-edit="1"]') ||
+        Boolean(anchor.querySelector('[data-tm-inline-dialog-edit="1"]'));
+    if (containsDialogEditTarget) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        return;
+    }
     if (shouldAllowAnchorInteraction(anchor)) return;
     const editingImage = event.target && event.target.closest('img[data-tm-inline-editing="1"]');
     if (editingImage) return;

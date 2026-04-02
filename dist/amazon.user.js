@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.42.1725
+// @version      26.42.1739
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js
@@ -562,16 +562,36 @@
     }
     return element.parentElement instanceof HTMLElement ? element.parentElement : null;
   }
+  function findDialogTriggerHost(element) {
+    if (!(element instanceof HTMLElement)) return null;
+    const anchor = element.closest("a");
+    if (anchor instanceof HTMLAnchorElement && anchor.parentElement) {
+      return anchor;
+    }
+    return element;
+  }
+  function applyDialogValueToElement(element, value) {
+    const nextValue = typeof value === "string" ? value : String(value ?? "");
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+      element.value = nextValue;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
+    element.textContent = nextValue;
+  }
   function makeEditable(manager, element, config) {
     if (!element || manager.editedElements.has(element)) return;
     const isImageElement = element instanceof HTMLImageElement;
     const isImage = config && config.type === "image" && isImageElement || isImageElement;
-    const isInput = !isImage && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement);
+    const usesDialogTrigger = !isImage && Boolean(config && config.editMode === "dialog");
+    const isInput = !isImage && !usesDialogTrigger && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement);
     const noHighlight = Boolean(config && config.noHighlight);
     const state = {
       element,
       isImage,
       isInput,
+      usesDialogTrigger,
       noHighlight,
       originalValue: extractElementValue(element),
       disabled: isInput ? element.disabled : void 0,
@@ -586,7 +606,10 @@
       imageTriggerHostPosition: null,
       imageTriggerHostPositionAdjusted: false,
       imageTriggerClickHandler: null,
-      imageTriggerKeyHandler: null
+      imageTriggerKeyHandler: null,
+      dialogTrigger: null,
+      dialogTriggerHost: null,
+      dialogTriggerClickHandler: null
     };
     if (isImage) {
       const openReplaceDialog = (event) => {
@@ -635,6 +658,41 @@
       }
       element.style.cursor = "zoom-in";
       element.setAttribute("title", host ? "左键预览，点“换”角标替换图片" : "左键预览，右键替换图片");
+    } else if (usesDialogTrigger) {
+      const openTextDialog = (event) => {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+          }
+        }
+        const fieldName = config && config.name ? config.name : "内容";
+        const currentValue = extractElementValue(element);
+        const nextValue = window.prompt(`请输入新的${fieldName}：`, currentValue);
+        if (nextValue === null) return;
+        if (nextValue === currentValue) {
+          manager.notification.show(`${fieldName}未发生变化。`, "info");
+          return;
+        }
+        applyDialogValueToElement(element, nextValue);
+        manager.notification.show(`${fieldName}已更新，点击“完成”保存。`, "success");
+      };
+      const host = findDialogTriggerHost(element);
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "tm-inline-text-dialog-trigger";
+      trigger.textContent = config && config.dialogButtonLabel ? config.dialogButtonLabel : "改";
+      trigger.setAttribute("aria-label", `修改${config && config.name ? config.name : "内容"}`);
+      trigger.setAttribute("title", "点击弹窗修改");
+      trigger.addEventListener("click", openTextDialog, true);
+      if (host && host.parentNode) {
+        host.parentNode.insertBefore(trigger, host.nextSibling);
+        state.dialogTrigger = trigger;
+        state.dialogTriggerHost = host;
+        state.dialogTriggerClickHandler = openTextDialog;
+      }
+      element.dataset.tmInlineDialogEdit = "1";
     } else if (isInput) {
       element.disabled = false;
       element.readOnly = false;
@@ -654,6 +712,7 @@
       if (!element) return;
       delete element.dataset.tmInlineEditing;
       element.removeAttribute("data-tm-inline-editing");
+      element.removeAttribute("data-tm-inline-dialog-edit");
       element.classList.remove("tm-inline-editing");
       if (state.isInput) {
         element.disabled = state.disabled;
@@ -691,6 +750,13 @@
         } else {
           element.removeAttribute("title");
         }
+      } else if (state.usesDialogTrigger) {
+        if (state.dialogTrigger) {
+          if (state.dialogTriggerClickHandler) {
+            state.dialogTrigger.removeEventListener("click", state.dialogTriggerClickHandler, true);
+          }
+          state.dialogTrigger.remove();
+        }
       } else if (state.contentEditable === null || state.contentEditable === void 0) {
         element.removeAttribute("contenteditable");
       } else {
@@ -711,10 +777,14 @@
         if (!(node instanceof HTMLElement)) return;
         node.classList.remove("tm-inline-editing");
         node.removeAttribute("data-tm-inline-editing");
+        node.removeAttribute("data-tm-inline-dialog-edit");
         if (node.isContentEditable) {
           node.removeAttribute("contenteditable");
           node.contentEditable = "inherit";
         }
+      });
+      scope.querySelectorAll(".tm-inline-text-dialog-trigger").forEach((node) => {
+        node.remove();
       });
     } catch (error) {
       console.warn("清理残留编辑标记失败:", error);
@@ -1065,7 +1135,7 @@
     if (elements.length === 0) {
       manager.notification.show("未找到可编辑的元素，请检查选择器配置。", "warning");
     } else {
-      manager.notification.show("编辑模式已开启：可直接改文字；点击图片角标“换”可替换，左键预览保留。", "info");
+      manager.notification.show("编辑模式已开启：可直接改文字；评论数点旁边“改”按钮编辑；点击图片角标“换”可替换，左键预览保留。", "info");
     }
   }
   function exitEditMode(manager, saveChanges = true) {
@@ -1160,8 +1230,17 @@
     if (!manager.isEditing) return;
     const replaceTrigger = event.target && event.target.closest && event.target.closest(".tm-inline-image-replace-trigger");
     if (replaceTrigger) return;
+    const dialogTrigger = event.target && event.target.closest && event.target.closest(".tm-inline-text-dialog-trigger");
+    if (dialogTrigger) return;
     const anchor = event.target && event.target.closest("a");
     if (!anchor) return;
+    const containsDialogEditTarget = anchor.matches('[data-tm-inline-dialog-edit="1"]') || Boolean(anchor.querySelector('[data-tm-inline-dialog-edit="1"]'));
+    if (containsDialogEditTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (shouldAllowAnchorInteraction(anchor)) return;
     const editingImage = event.target && event.target.closest('img[data-tm-inline-editing="1"]');
     if (editingImage) return;
@@ -1591,7 +1670,9 @@
     {
       name: "评论数",
       keySuffix: "customer_review_count",
-      selector: "#acrCustomerReviewText"
+      selector: "#acrCustomerReviewText",
+      editMode: "dialog",
+      dialogButtonLabel: "改"
     },
     {
       name: "Business Name 标签",
@@ -2214,6 +2295,35 @@
             filter: brightness(1.06);
         }
         .tm-inline-image-replace-trigger:focus {
+            outline: 2px solid rgba(14, 165, 233, 0.95);
+            outline-offset: 2px;
+        }
+        .tm-inline-text-dialog-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            margin-left: 6px;
+            padding: 0 8px;
+            border: none;
+            border-radius: 999px;
+            vertical-align: middle;
+            color: #ffffff;
+            background: linear-gradient(135deg, #198754, #157347);
+            box-shadow: 0 6px 14px rgba(21, 128, 61, 0.24);
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .tm-inline-text-dialog-trigger:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 8px 18px rgba(21, 128, 61, 0.3);
+        }
+        .tm-inline-text-dialog-trigger:focus {
             outline: 2px solid rgba(14, 165, 233, 0.95);
             outline-offset: 2px;
         }
