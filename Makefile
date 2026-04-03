@@ -26,7 +26,7 @@ VERSION := $(shell "$(NODE_BIN)" -e "\
 ")
 endif
 endif
-COMMIT_MSG ?= "bump version $(VERSION)"
+COMMIT_MSG ?= bump version $(VERSION)
 
 
 .PHONY: help ensure-node ensure-git ensure-curl print-version update-version dev deploy print-cdn purge-cdn
