@@ -10,7 +10,7 @@
 - 评论数 `#acrCustomerReviewText` 修改
 - 页面标题 `document.title` 弹窗修改
 - 退款行显示/隐藏切换
-- 右下角悬浮工具面板
+- 右下角常驻工具栏
 
 ## 项目结构
 
@@ -67,7 +67,7 @@ pnpm run typecheck
 2. 打开下面这个地址：
 
 ```text
-https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js
+https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
 ```
 
 3. Tampermonkey 会弹出安装页
@@ -82,9 +82,8 @@ https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/di
 
 ## 安装后怎么用
 
-安装完成后，进入任意匹配的 Amazon 页面，右下角会出现一个 `工具` 按钮。
+安装完成后，进入任意匹配的 Amazon 页面，右下角会直接显示一排工具按钮。
 
-- 悬停或点击 `工具`：展开完整功能面板
 - 点击 `编辑`：进入页面内联编辑模式
 - 点击 `修改标题`：弹窗输入新的网页标题
 - 点击 `隐藏退款行`：切换退款总计行显示状态
@@ -103,10 +102,10 @@ https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/di
 
 - `downloadURL`
   指向完整脚本：
-  `https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js`
+  `https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js`
 - `updateURL`
   指向轻量元数据：
-  `https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.meta.js`
+  `https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.meta.js`
 
 这是更推荐的做法：
 
@@ -116,7 +115,7 @@ https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/di
 
 ### 这种方式会不会有缓存
 
-会，任何走 GitHub Raw 或浏览器网络层的方式，都可能遇到缓存。
+会，任何走 jsDelivr CDN 或浏览器网络层的方式，都可能遇到缓存。
 
 不过正常情况下，只要你做了下面几件事，更新会比较稳定：
 

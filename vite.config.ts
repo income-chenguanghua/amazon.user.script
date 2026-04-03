@@ -17,9 +17,9 @@ export default defineConfig({
         grant: ['GM_addStyle', 'GM_getValue', 'GM_setValue', 'unsafeWindow'],
         'run-at': 'document-start',
         updateURL:
-          'https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.meta.js',
+          'https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.meta.js',
         downloadURL:
-          'https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js'
+          'https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js'
       },
       build: {
         fileName: 'amazon.user.js',

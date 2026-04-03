@@ -1,28 +1,119 @@
 import { GM_addStyle, unsafeWindow } from '$';
 
+const TOOLBAR_ICONS = {
+    pencil: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11.7 2.8a1.77 1.77 0 0 1 2.5 2.5L6 13.5l-3.5.5.5-3.5 8.2-8.2Z"></path>
+            <path d="M10.3 4.2 11.8 5.7"></path>
+        </svg>
+    `,
+    check: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3.75 8.5 2.5 2.5 6-6"></path>
+        </svg>
+    `,
+    heading: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 3.25v9.5"></path>
+            <path d="M12 3.25v9.5"></path>
+            <path d="M4 8h8"></path>
+        </svg>
+    `,
+    eye: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1.75 8s2.2-3.5 6.25-3.5S14.25 8 14.25 8s-2.2 3.5-6.25 3.5S1.75 8 1.75 8Z"></path>
+            <circle cx="8" cy="8" r="1.5"></circle>
+        </svg>
+    `,
+    eyeClosed: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.2 5.2C3.3 4.1 5.1 3.3 8 3.3c4.05 0 6.25 3.5 6.25 3.5a9.7 9.7 0 0 1-1.55 1.86"></path>
+            <path d="M6.2 6.3A2.1 2.1 0 0 1 9.7 9.8"></path>
+            <path d="M13.8 13.8 2.2 2.2"></path>
+            <path d="M1.75 8s1.02 1.62 2.94 2.7"></path>
+            <path d="M8 12.5c1.25 0 2.35-.34 3.3-.84"></path>
+        </svg>
+    `,
+    trash: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.75 4.25h8.5"></path>
+            <path d="M6 2.75h4"></path>
+            <path d="m4.75 4.25.55 8h5.4l.55-8"></path>
+            <path d="M6.5 6.25v4.25"></path>
+            <path d="M9.5 6.25v4.25"></path>
+        </svg>
+    `,
+    x: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m4.25 4.25 7.5 7.5"></path>
+            <path d="m11.75 4.25-7.5 7.5"></path>
+        </svg>
+    `
+};
+
+function renderToolbarButton({ id, className, title, label, icon, activeIcon = '' }) {
+    const iconMarkup = activeIcon
+        ? `
+            <span class="tm-inline-btn-icon tm-inline-btn-icon-default" aria-hidden="true">${TOOLBAR_ICONS[icon]}</span>
+            <span class="tm-inline-btn-icon tm-inline-btn-icon-alt" aria-hidden="true">${TOOLBAR_ICONS[activeIcon]}</span>
+        `
+        : `<span class="tm-inline-btn-icon" aria-hidden="true">${TOOLBAR_ICONS[icon]}</span>`;
+
+    return `
+        <button type="button" id="${id}" class="tm-inline-btn ${className}" title="${title}">
+            ${iconMarkup}
+            <span class="tm-inline-btn-label">${label}</span>
+        </button>
+    `;
+}
+
 export function createEditorUI(manager) {
     manager.container = document.createElement('div');
     manager.container.id = 'tm-inline-editor';
     manager.container.innerHTML = `
         <div id="tm-inline-toolbar-panel" class="tm-inline-toolbar-panel">
-            <div class="tm-inline-toolbar-panel-header">
-                <div class="tm-inline-toolbar-title">Amazon 编辑助手</div>
-                <div class="tm-inline-toolbar-subtitle">悬停或点击右下角按钮，展开全部功能</div>
+            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
+                ${renderToolbarButton({
+                    id: 'tm-edit-toggle',
+                    className: 'tm-inline-btn-primary',
+                    title: '进入编辑模式',
+                    label: '编辑',
+                    icon: 'pencil',
+                    activeIcon: 'check'
+                })}
             </div>
-            <button type="button" id="tm-edit-toggle" class="tm-inline-btn tm-inline-btn-primary">编辑</button>
-            <button type="button" id="tm-edit-title" class="tm-inline-btn tm-inline-btn-ghost" title="弹窗修改网站标题">修改标题</button>
-            <button type="button" id="tm-edit-toggle-refund" class="tm-inline-btn tm-inline-btn-ghost" title="切换退款总计行显示">隐藏退款行</button>
-            <button type="button" id="tm-edit-reset" class="tm-inline-btn tm-inline-btn-warning" title="删除所有保存的值并刷新页面">重置</button>
-            <button type="button" id="tm-edit-hide" class="tm-inline-btn tm-inline-btn-ghost" title="隐藏编辑按钮">隐藏按钮</button>
+            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
+                ${renderToolbarButton({
+                    id: 'tm-edit-title',
+                    className: 'tm-inline-btn-ghost',
+                    title: '弹窗修改网站标题',
+                    label: '标题',
+                    icon: 'heading'
+                })}
+                ${renderToolbarButton({
+                    id: 'tm-edit-toggle-refund',
+                    className: 'tm-inline-btn-ghost',
+                    title: '显示或隐藏退款总计行',
+                    label: '退款',
+                    icon: 'eye',
+                    activeIcon: 'eyeClosed'
+                })}
+                ${renderToolbarButton({
+                    id: 'tm-edit-reset',
+                    className: 'tm-inline-btn-warning',
+                    title: '删除所有保存的值并刷新页面',
+                    label: '重置',
+                    icon: 'trash'
+                })}
+                ${renderToolbarButton({
+                    id: 'tm-edit-hide',
+                    className: 'tm-inline-btn-ghost',
+                    title: '隐藏编辑按钮',
+                    label: '隐藏',
+                    icon: 'x'
+                })}
+            </div>
         </div>
-        <button
-            type="button"
-            id="tm-inline-toolbar-trigger"
-            class="tm-inline-toolbar-trigger"
-            aria-expanded="false"
-            aria-controls="tm-inline-toolbar-panel"
-            title="展开功能面板"
-        >工具</button>
     `;
     document.body.appendChild(manager.container);
 
@@ -31,7 +122,7 @@ export function createEditorUI(manager) {
     manager.refundToggleBtn = manager.container.querySelector('#tm-edit-toggle-refund');
     manager.resetBtn = manager.container.querySelector('#tm-edit-reset');
     manager.hideBtn = manager.container.querySelector('#tm-edit-hide');
-    manager.toolbarTriggerBtn = manager.container.querySelector('#tm-inline-toolbar-trigger');
+    manager.toolbarTriggerBtn = null;
 }
 
 export function attachPanelEvents(manager) {
@@ -50,14 +141,6 @@ export function attachPanelEvents(manager) {
     if (manager.hideBtn) {
         manager.hideBtn.addEventListener('click', () => manager.hideButton());
     }
-    if (manager.toolbarTriggerBtn) {
-        manager.toolbarTriggerBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            manager.togglePanelOpen();
-        });
-    }
-    document.addEventListener('click', manager.boundOutsideClickHandler);
 }
 
 export function setPanelOpen(manager, nextOpen) {

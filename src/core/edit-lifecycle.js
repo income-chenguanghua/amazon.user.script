@@ -8,6 +8,16 @@ import {
     stopEditMutationObserver
 } from './edit-sync.js';
 
+function setButtonLabel(button, label) {
+    if (!button) return;
+    const labelElement = button.querySelector('.tm-inline-btn-label');
+    if (labelElement) {
+        labelElement.textContent = label;
+        return;
+    }
+    button.textContent = label;
+}
+
 export function handleEditButtonClick(manager) {
     manager.setPanelOpen(false);
     if (manager.isEditing) {
@@ -20,7 +30,9 @@ export function handleEditButtonClick(manager) {
 
 export function refreshButtonStates(manager) {
     if (manager.toggleBtn) {
-        manager.toggleBtn.textContent = manager.isEditing ? '完成' : manager.initialEditLabel;
+        setButtonLabel(manager.toggleBtn, manager.isEditing ? '完成' : manager.initialEditLabel);
+        manager.toggleBtn.title = manager.isEditing ? '保存并退出编辑模式' : '进入编辑模式';
+        manager.toggleBtn.setAttribute('aria-pressed', manager.isEditing ? 'true' : 'false');
         manager.toggleBtn.disabled = false;
     }
 }
@@ -36,8 +48,13 @@ export function applyRefundRowState(manager, updateLabel = false) {
         });
     }
 
-    if (updateLabel && manager.refundToggleBtn) {
-        manager.refundToggleBtn.textContent = manager.refundRowHidden ? '显示退款行' : '隐藏退款行';
+    if (manager.refundToggleBtn) {
+        if (updateLabel) {
+            setButtonLabel(manager.refundToggleBtn, '退款');
+        }
+        manager.refundToggleBtn.classList.toggle('tm-inline-btn-selected', manager.refundRowHidden);
+        manager.refundToggleBtn.title = manager.refundRowHidden ? '已隐藏退款行，点击恢复显示' : '显示或隐藏退款总计行';
+        manager.refundToggleBtn.setAttribute('aria-pressed', manager.refundRowHidden ? 'true' : 'false');
     }
 }
 

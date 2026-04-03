@@ -83,7 +83,7 @@ export class InlineEditManager {
         this.applyStoredDocumentTitle();
 
         if (this.toggleBtn) {
-            this.initialEditLabel = this.toggleBtn.textContent || this.initialEditLabel;
+            this.initialEditLabel = this.toggleBtn.textContent?.trim() || this.initialEditLabel;
         }
 
         if (this.textObserver && typeof this.textObserver.setDataResolver === 'function') {

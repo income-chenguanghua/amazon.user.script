@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.42.1739
+// @version      26.43.1902
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
-// @downloadURL  https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.user.js
-// @updateURL    https://github.com/income-chenguanghua/amazon.user.script/raw/refs/heads/main/dist/amazon.meta.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.meta.js
 // @include      *://amazon.*/*
 // @include      *://*.amazon.*/*
 // @grant        GM_addStyle
@@ -390,29 +390,115 @@
     }
     manager.notification.show("标题恢复失败，请查看控制台。", "error");
   }
+  const TOOLBAR_ICONS = {
+    pencil: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11.7 2.8a1.77 1.77 0 0 1 2.5 2.5L6 13.5l-3.5.5.5-3.5 8.2-8.2Z"></path>
+            <path d="M10.3 4.2 11.8 5.7"></path>
+        </svg>
+    `,
+    check: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3.75 8.5 2.5 2.5 6-6"></path>
+        </svg>
+    `,
+    heading: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 3.25v9.5"></path>
+            <path d="M12 3.25v9.5"></path>
+            <path d="M4 8h8"></path>
+        </svg>
+    `,
+    eye: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1.75 8s2.2-3.5 6.25-3.5S14.25 8 14.25 8s-2.2 3.5-6.25 3.5S1.75 8 1.75 8Z"></path>
+            <circle cx="8" cy="8" r="1.5"></circle>
+        </svg>
+    `,
+    eyeClosed: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.2 5.2C3.3 4.1 5.1 3.3 8 3.3c4.05 0 6.25 3.5 6.25 3.5a9.7 9.7 0 0 1-1.55 1.86"></path>
+            <path d="M6.2 6.3A2.1 2.1 0 0 1 9.7 9.8"></path>
+            <path d="M13.8 13.8 2.2 2.2"></path>
+            <path d="M1.75 8s1.02 1.62 2.94 2.7"></path>
+            <path d="M8 12.5c1.25 0 2.35-.34 3.3-.84"></path>
+        </svg>
+    `,
+    trash: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.75 4.25h8.5"></path>
+            <path d="M6 2.75h4"></path>
+            <path d="m4.75 4.25.55 8h5.4l.55-8"></path>
+            <path d="M6.5 6.25v4.25"></path>
+            <path d="M9.5 6.25v4.25"></path>
+        </svg>
+    `,
+    x: `
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m4.25 4.25 7.5 7.5"></path>
+            <path d="m11.75 4.25-7.5 7.5"></path>
+        </svg>
+    `
+  };
+  function renderToolbarButton({ id, className, title, label, icon, activeIcon = "" }) {
+    const iconMarkup = activeIcon ? `
+            <span class="tm-inline-btn-icon tm-inline-btn-icon-default" aria-hidden="true">${TOOLBAR_ICONS[icon]}</span>
+            <span class="tm-inline-btn-icon tm-inline-btn-icon-alt" aria-hidden="true">${TOOLBAR_ICONS[activeIcon]}</span>
+        ` : `<span class="tm-inline-btn-icon" aria-hidden="true">${TOOLBAR_ICONS[icon]}</span>`;
+    return `
+        <button type="button" id="${id}" class="tm-inline-btn ${className}" title="${title}">
+            ${iconMarkup}
+            <span class="tm-inline-btn-label">${label}</span>
+        </button>
+    `;
+  }
   function createEditorUI(manager) {
     manager.container = document.createElement("div");
     manager.container.id = "tm-inline-editor";
     manager.container.innerHTML = `
         <div id="tm-inline-toolbar-panel" class="tm-inline-toolbar-panel">
-            <div class="tm-inline-toolbar-panel-header">
-                <div class="tm-inline-toolbar-title">Amazon 编辑助手</div>
-                <div class="tm-inline-toolbar-subtitle">悬停或点击右下角按钮，展开全部功能</div>
+            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
+                ${renderToolbarButton({
+    id: "tm-edit-toggle",
+    className: "tm-inline-btn-primary",
+    title: "进入编辑模式",
+    label: "编辑",
+    icon: "pencil",
+    activeIcon: "check"
+  })}
             </div>
-            <button type="button" id="tm-edit-toggle" class="tm-inline-btn tm-inline-btn-primary">编辑</button>
-            <button type="button" id="tm-edit-title" class="tm-inline-btn tm-inline-btn-ghost" title="弹窗修改网站标题">修改标题</button>
-            <button type="button" id="tm-edit-toggle-refund" class="tm-inline-btn tm-inline-btn-ghost" title="切换退款总计行显示">隐藏退款行</button>
-            <button type="button" id="tm-edit-reset" class="tm-inline-btn tm-inline-btn-warning" title="删除所有保存的值并刷新页面">重置</button>
-            <button type="button" id="tm-edit-hide" class="tm-inline-btn tm-inline-btn-ghost" title="隐藏编辑按钮">隐藏按钮</button>
+            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
+                ${renderToolbarButton({
+    id: "tm-edit-title",
+    className: "tm-inline-btn-ghost",
+    title: "弹窗修改网站标题",
+    label: "标题",
+    icon: "heading"
+  })}
+                ${renderToolbarButton({
+    id: "tm-edit-toggle-refund",
+    className: "tm-inline-btn-ghost",
+    title: "显示或隐藏退款总计行",
+    label: "退款",
+    icon: "eye",
+    activeIcon: "eyeClosed"
+  })}
+                ${renderToolbarButton({
+    id: "tm-edit-reset",
+    className: "tm-inline-btn-warning",
+    title: "删除所有保存的值并刷新页面",
+    label: "重置",
+    icon: "trash"
+  })}
+                ${renderToolbarButton({
+    id: "tm-edit-hide",
+    className: "tm-inline-btn-ghost",
+    title: "隐藏编辑按钮",
+    label: "隐藏",
+    icon: "x"
+  })}
+            </div>
         </div>
-        <button
-            type="button"
-            id="tm-inline-toolbar-trigger"
-            class="tm-inline-toolbar-trigger"
-            aria-expanded="false"
-            aria-controls="tm-inline-toolbar-panel"
-            title="展开功能面板"
-        >工具</button>
     `;
     document.body.appendChild(manager.container);
     manager.toggleBtn = manager.container.querySelector("#tm-edit-toggle");
@@ -420,7 +506,7 @@
     manager.refundToggleBtn = manager.container.querySelector("#tm-edit-toggle-refund");
     manager.resetBtn = manager.container.querySelector("#tm-edit-reset");
     manager.hideBtn = manager.container.querySelector("#tm-edit-hide");
-    manager.toolbarTriggerBtn = manager.container.querySelector("#tm-inline-toolbar-trigger");
+    manager.toolbarTriggerBtn = null;
   }
   function attachPanelEvents(manager) {
     if (manager.toggleBtn) {
@@ -438,14 +524,6 @@
     if (manager.hideBtn) {
       manager.hideBtn.addEventListener("click", () => manager.hideButton());
     }
-    if (manager.toolbarTriggerBtn) {
-      manager.toolbarTriggerBtn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        manager.togglePanelOpen();
-      });
-    }
-    document.addEventListener("click", manager.boundOutsideClickHandler);
   }
   function setPanelOpen(manager, nextOpen) {
     manager.panelOpen = Boolean(nextOpen);
@@ -1085,6 +1163,15 @@
   function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
   }
+  function setButtonLabel(button, label) {
+    if (!button) return;
+    const labelElement = button.querySelector(".tm-inline-btn-label");
+    if (labelElement) {
+      labelElement.textContent = label;
+      return;
+    }
+    button.textContent = label;
+  }
   function handleEditButtonClick(manager) {
     manager.setPanelOpen(false);
     if (manager.isEditing) {
@@ -1095,7 +1182,9 @@
   }
   function refreshButtonStates(manager) {
     if (manager.toggleBtn) {
-      manager.toggleBtn.textContent = manager.isEditing ? "完成" : manager.initialEditLabel;
+      setButtonLabel(manager.toggleBtn, manager.isEditing ? "完成" : manager.initialEditLabel);
+      manager.toggleBtn.title = manager.isEditing ? "保存并退出编辑模式" : "进入编辑模式";
+      manager.toggleBtn.setAttribute("aria-pressed", manager.isEditing ? "true" : "false");
       manager.toggleBtn.disabled = false;
     }
   }
@@ -1108,8 +1197,13 @@
         row.classList.add("tm-inline-refund-row-hidden");
       });
     }
-    if (updateLabel && manager.refundToggleBtn) {
-      manager.refundToggleBtn.textContent = manager.refundRowHidden ? "显示退款行" : "隐藏退款行";
+    if (manager.refundToggleBtn) {
+      if (updateLabel) {
+        setButtonLabel(manager.refundToggleBtn, "退款");
+      }
+      manager.refundToggleBtn.classList.toggle("tm-inline-btn-selected", manager.refundRowHidden);
+      manager.refundToggleBtn.title = manager.refundRowHidden ? "已隐藏退款行，点击恢复显示" : "显示或隐藏退款总计行";
+      manager.refundToggleBtn.setAttribute("aria-pressed", manager.refundRowHidden ? "true" : "false");
     }
   }
   function toggleRefundRowVisibility(manager) {
@@ -1285,7 +1379,7 @@
       this.injectShowFunction();
       this.applyStoredDocumentTitle();
       if (this.toggleBtn) {
-        this.initialEditLabel = this.toggleBtn.textContent || this.initialEditLabel;
+        this.initialEditLabel = this.toggleBtn.textContent?.trim() || this.initialEditLabel;
       }
       if (this.textObserver && typeof this.textObserver.setDataResolver === "function") {
         this.textObserver.setDataResolver(() => this.getRuntimeDataList());
@@ -2091,85 +2185,41 @@
     _GM_addStyle(`
         #tm-inline-editor {
             position: fixed;
-            bottom: 24px;
-            right: 24px;
+            bottom: 16px;
+            right: 16px;
             display: flex;
-            flex-direction: column;
             align-items: flex-end;
             z-index: 100000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: calc(100vw - 12px);
         }
         .tm-inline-toolbar-panel {
-            position: absolute;
-            right: 0;
-            bottom: calc(100% + 12px);
-            width: min(280px, calc(100vw - 24px));
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-auto-flow: column;
+            align-items: center;
             gap: 8px;
-            padding: 14px;
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.96);
-            border: 1px solid rgba(148, 163, 184, 0.24);
-            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.18);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transform: translateY(12px) scale(0.98);
-            transform-origin: bottom right;
-            transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s step-end;
+            padding: 8px;
+            border-radius: 10px;
+            background: rgba(246, 248, 250, 0.96);
+            border: 1px solid #d0d7de;
+            box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            max-width: min(520px, calc(100vw - 16px));
         }
-        #tm-inline-editor:hover .tm-inline-toolbar-panel,
-        #tm-inline-editor:focus-within .tm-inline-toolbar-panel,
-        #tm-inline-editor.tm-inline-panel-open .tm-inline-toolbar-panel {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-            transform: translateY(0) scale(1);
-            transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s;
-        }
-        .tm-inline-toolbar-panel-header {
+        .tm-inline-toolbar-group {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 2px 2px 8px;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
         }
-        .tm-inline-toolbar-title {
-            color: #0f172a;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.2;
+        .tm-inline-toolbar-group-main {
+            padding-right: 8px;
+            border-right: 1px solid rgba(208, 215, 222, 0.96);
         }
-        .tm-inline-toolbar-subtitle {
-            color: #475569;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-        .tm-inline-toolbar-trigger {
-            border: none;
-            border-radius: 18px;
-            min-width: 68px;
-            height: 52px;
-            padding: 0 16px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            color: #ffffff;
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            box-shadow: 0 10px 24px rgba(13, 110, 253, 0.32);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-        }
-        .tm-inline-toolbar-trigger:hover,
-        #tm-inline-editor.tm-inline-panel-open .tm-inline-toolbar-trigger {
-            transform: translateY(-1px);
-            box-shadow: 0 14px 28px rgba(13, 110, 253, 0.38);
-            filter: brightness(1.02);
-        }
-        .tm-inline-toolbar-trigger:focus {
-            outline: 2px solid rgba(14, 165, 233, 0.95);
-            outline-offset: 2px;
+        .tm-inline-toolbar-group-actions {
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
         #tm-inline-notifications {
             position: fixed;
@@ -2211,57 +2261,117 @@
             background: linear-gradient(135deg, rgba(220, 38, 38, 0.96), rgba(190, 24, 93, 0.96));
         }
         #tm-inline-editor .tm-inline-btn {
-            border: none;
-            border-radius: 14px;
-            width: 100%;
-            padding: 11px 14px;
-            font-size: 13px;
-            font-weight: 600;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            min-width: 0;
+            height: 28px;
+            padding: 0 10px;
+            font-size: 12px;
+            line-height: 20px;
+            font-weight: 500;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
-            text-align: left;
-            color: #ffffff;
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            box-shadow: 0 6px 16px rgba(13, 110, 253, 0.25);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+            justify-content: center;
+            gap: 6px;
+            text-align: center;
+            white-space: nowrap;
+            color: #24292f;
+            background: linear-gradient(#f6f8fa, #f3f4f6);
+            box-shadow: 0 1px 0 rgba(27, 31, 36, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+            flex: 0 0 auto;
+        }
+        #tm-inline-editor .tm-inline-btn-icon {
+            width: 12px;
+            height: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+        #tm-inline-editor .tm-inline-btn-icon svg {
+            width: 12px;
+            height: 12px;
+            display: block;
+            overflow: visible;
+        }
+        #tm-inline-editor .tm-inline-btn-icon-alt {
+            display: none;
+        }
+        #tm-inline-editor .tm-inline-btn-label {
+            display: inline-block;
         }
         #tm-inline-editor .tm-inline-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.35);
+            background: linear-gradient(#f3f4f6, #ebedf0);
+            border-color: #afb8c1;
+            box-shadow: 0 1px 0 rgba(27, 31, 36, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
         #tm-inline-editor .tm-inline-btn:active {
-            transform: translateY(0);
+            background: #ebecf0;
+            box-shadow: inset 0 1px 0 rgba(208, 215, 222, 0.2);
+        }
+        #tm-inline-editor .tm-inline-btn:focus-visible {
+            outline: 2px solid rgba(9, 105, 218, 0.35);
+            outline-offset: 0;
+            box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
         }
         #tm-inline-editor .tm-inline-btn:disabled {
-            opacity: 0.55;
+            opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
             box-shadow: none;
         }
         #tm-inline-editor .tm-inline-btn:disabled:hover {
-            transform: none;
             box-shadow: none;
+            border-color: #d0d7de;
+            background: linear-gradient(#f6f8fa, #f3f4f6);
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-primary {
+            color: #ffffff;
+            background: linear-gradient(#2da44e, #2c974b);
+            border-color: rgba(31, 136, 61, 0.4);
+            box-shadow: 0 1px 0 rgba(27, 31, 36, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-primary:hover {
+            background: linear-gradient(#2c974b, #298e46);
+            border-color: rgba(31, 136, 61, 0.55);
         }
         #tm-inline-editor .tm-inline-btn.tm-inline-btn-active {
-            background: linear-gradient(135deg, #198754, #157347);
-            box-shadow: 0 8px 20px rgba(25, 135, 84, 0.35);
+            color: #ffffff;
+            background: linear-gradient(#1f883d, #1a7f37);
+            border-color: rgba(31, 136, 61, 0.65);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
         #tm-inline-editor .tm-inline-btn.tm-inline-btn-warning {
-            background: linear-gradient(135deg, #fd7e14, #e36209);
-            box-shadow: 0 6px 16px rgba(253, 126, 20, 0.25);
-        }
-        #tm-inline-editor .tm-inline-btn.tm-inline-btn-warning:hover {
-            box-shadow: 0 8px 20px rgba(253, 126, 20, 0.35);
-        }
-        #tm-inline-editor .tm-inline-btn.tm-inline-btn-ghost {
-            background: rgba(15, 23, 42, 0.1);
-            color: #0f172a;
+            color: #cf222e;
+            background: linear-gradient(#fff8f8, #fff1f0);
+            border-color: rgba(207, 34, 46, 0.22);
             box-shadow: none;
         }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-warning:hover {
+            background: linear-gradient(#ffefeb, #ffe6e0);
+            border-color: rgba(207, 34, 46, 0.32);
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-ghost {
+            background: linear-gradient(#f6f8fa, #f3f4f6);
+            color: #24292f;
+        }
         #tm-inline-editor .tm-inline-btn.tm-inline-btn-ghost:hover {
-            background: rgba(15, 23, 42, 0.16);
+            background: linear-gradient(#f3f4f6, #ebedf0);
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-selected {
+            color: #0969da;
+            background: linear-gradient(#ddf4ff, #d8eefc);
+            border-color: rgba(9, 105, 218, 0.24);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-active .tm-inline-btn-icon-default,
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-selected .tm-inline-btn-icon-default {
+            display: none;
+        }
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-active .tm-inline-btn-icon-alt,
+        #tm-inline-editor .tm-inline-btn.tm-inline-btn-selected .tm-inline-btn-icon-alt {
+            display: inline-flex;
         }
         .tm-inline-refund-row-hidden {
             opacity: 0 !important;
@@ -2352,23 +2462,37 @@
         }
         @media (max-width: 640px) {
             #tm-inline-editor {
-                bottom: 16px;
+                bottom: 12px;
                 right: 12px;
+                max-width: calc(100vw - 24px);
             }
             .tm-inline-toolbar-panel {
-                width: min(260px, calc(100vw - 24px));
+                grid-auto-flow: row;
+                justify-items: end;
+                max-width: min(340px, calc(100vw - 24px));
+                gap: 6px;
+                padding: 7px;
             }
-            .tm-inline-toolbar-trigger {
-                min-width: 60px;
-                height: 56px;
-                padding: 0 14px;
-                border-radius: 20px;
+            .tm-inline-toolbar-group-main {
+                padding-right: 0;
+                border-right: none;
+            }
+            #tm-inline-editor .tm-inline-btn {
+                height: 26px;
+                padding: 0 9px;
+                font-size: 11px;
+                gap: 5px;
+            }
+            #tm-inline-editor .tm-inline-btn-icon,
+            #tm-inline-editor .tm-inline-btn-icon svg {
+                width: 11px;
+                height: 11px;
             }
             #tm-inline-notifications {
                 top: auto;
                 right: 10px;
                 left: 10px;
-                bottom: 80px;
+                bottom: 68px;
                 width: auto;
             }
             .tm-inline-notification {
