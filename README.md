@@ -124,6 +124,7 @@ https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.u
 3. `downloadURL` 指向完整的 `amazon.user.js`
 4. 每次改完后重新构建，并把 `dist/amazon.user.js` 和 `dist/amazon.meta.js` 一起提交
 5. 如果你想让发布更稳，后续可以考虑改成 GitHub Release 附件地址，而不是长期直接指向 `main`
+6. 如果不是使用 `make deploy`，推送远端后执行一次 `make purge-cdn`，主动清 jsDelivr 别名地址缓存
 
 ### 如果已经更新了仓库，但 Tampermonkey 没检测到
 
@@ -132,19 +133,24 @@ https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.u
 1. 确认 `dist/amazon.user.js` 和 `dist/amazon.meta.js` 都已经推到远端
 2. 确认 `@version` 已经递增
 3. 在 Tampermonkey 里手动执行一次检查更新
-4. 仍然不生效时，直接重新打开 `amazon.user.js` 安装地址覆盖安装一次
+4. 运行 `make purge-cdn`，主动清 jsDelivr 缓存
+5. 仍然不生效时，直接重新打开 `amazon.user.js` 安装地址覆盖安装一次
 
 ## 发布流程建议
 
 每次发版建议按下面流程走：
 
 ```bash
-make
 make deploy
-git add Makefile package.json pnpm-lock.yaml vite.config.ts dist/amazon.user.js dist/amazon.meta.js src/main.js README.md
-git commit -m "chore: release userscript"
-git push
 ```
+
+补充说明：
+
+- `make deploy` 会自动执行：更新版本号、构建、类型检查、`git add -A`、提交、`git push`、再 purge jsDelivr 缓存
+- 默认提交信息是 `bump version`
+- 如果需要自定义提交信息，可以这样执行：`make deploy COMMIT_MSG="your message"`
+- `git add -A` 会提交当前仓库里的所有变更；如果你有不想一起发版的改动，先单独处理掉再执行 `make deploy`
+- `make print-cdn` 可以打印当前安装地址和 purge 地址，方便排查
 
 ## 备注
 
