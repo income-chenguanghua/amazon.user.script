@@ -60,7 +60,7 @@ fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');\
 dev: ensure-node
 	@"$(PKG_BIN)" run dev
 
-deploy: ensure-node
+deploy: update-version
 	@"$(PKG_BIN)" run build
 	@"$(PKG_BIN)" run typecheck
 	@echo "Deploy artifacts are ready in dist/. Commit and push when you want to publish them."
