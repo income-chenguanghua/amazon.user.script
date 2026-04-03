@@ -12,7 +12,6 @@ REPO_SLUG := income-chenguanghua/amazon.user.script
 CDN_BASE := https://cdn.jsdelivr.net/gh/$(REPO_SLUG)
 PURGE_BASE := https://purge.jsdelivr.net/gh/$(REPO_SLUG)
 CDN_FILES := dist/amazon.meta.js dist/amazon.user.js
-COMMIT_MSG ?= bump version
 
 ifeq ($(origin VERSION), undefined)
 ifneq ($(strip $(NODE_BIN)),)
@@ -27,6 +26,8 @@ VERSION := $(shell "$(NODE_BIN)" -e "\
 ")
 endif
 endif
+COMMIT_MSG ?= "bump version $(VERSION)"
+
 
 .PHONY: help ensure-node ensure-git ensure-curl print-version update-version dev deploy print-cdn purge-cdn
 
