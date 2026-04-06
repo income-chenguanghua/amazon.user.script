@@ -10,6 +10,7 @@ const CHARGE_SUMMARY_LABEL_ALIASES = {
     charge_shipping: ['shipping', 'shipping & handling', 'delivery', 'delivery charges', '运费', '配送', '送料', 'livraison', 'versand', 'spedizione', 'envio', 'envío', 'frete', 'verzending', 'frakt', 'dostawa', 'kargo'],
     charge_total_before_tax: ['total before tax', 'before tax', 'pretax', '税前', 'avant taxes', 'vor steuern', 'antes de impuestos', 'imposte escluse', 'vergiler haric'],
     charge_estimated_tax: ['estimated tax', 'estimated vat', 'estimated gst', 'tax to be collected', 'vat to be collected', '税费', '税額', 'consumption tax', 'impuestos estimados', 'taxe estimee', 'voraussichtliche steuer', 'imposta stimata', 'szacowany podatek'],
+    charge_grand_total: ['grand total', 'order total', 'gesamtsumme', '总计', '合计', '付款总额', 'importe total', 'totale', 'montant total', 'gesamtkosten'],
     charge_refund_total: ['refund total', 'refund', '退款', '返金', '払い戻し', 'reembolso', 'rimborso', 'remboursement', 'erstattung', 'rückerstattung', 'zwrot', 'iade', 'استرداد']
 };
 
@@ -27,6 +28,12 @@ function normalizeInlineText(value) {
     return String(value || '').replace(/[\s\u00a0]+/g, ' ').trim();
 }
 
+function extractInlineTextFromHtml(value) {
+    const template = document.createElement('template');
+    template.innerHTML = String(value || '');
+    return normalizeInlineText(template.content.textContent);
+}
+
 function getChargeSummaryRows() {
     const rows = [];
     const seen = new Set();
@@ -40,7 +47,16 @@ function getChargeSummaryRows() {
             if (!(row instanceof HTMLElement) || seen.has(row)) return;
 
             const labelElement = row.querySelector('.od-line-item-row-label, [class*="line-item-row-label"]');
-            const valueElement = row.querySelector('.od-line-item-row-content, [class*="line-item-row-content"]');
+            const valueContainerElement = row.querySelector('.od-line-item-row-content, [class*="line-item-row-content"]');
+            const valueElement = valueContainerElement instanceof HTMLElement
+                ? pickPreferredValueElement(
+                    Array.from(
+                        valueContainerElement.querySelectorAll(
+                            '.a-color-base, .a-size-base, .a-text-bold, span'
+                        )
+                    ).filter((element) => element instanceof HTMLElement)
+                ) || valueContainerElement
+                : null;
             if (!(labelElement instanceof HTMLElement) || !(valueElement instanceof HTMLElement)) return;
 
             const labelText = normalizeTextContent(labelElement.textContent);
@@ -103,9 +119,19 @@ function getChargeSummaryRowByKey(keySuffix) {
     };
 
     const fallbackIndex = fallbackIndexMap[keySuffix];
-    return Number.isInteger(fallbackIndex) && rows[fallbackIndex]
-        ? rows[fallbackIndex]
-        : null;
+    if (!Number.isInteger(fallbackIndex) || !rows[fallbackIndex]) {
+        return null;
+    }
+
+    if (keySuffix === 'charge_total_before_tax') {
+        return rows.length >= 4 ? rows[fallbackIndex] : null;
+    }
+
+    if (keySuffix === 'charge_estimated_tax') {
+        return rows.length >= 5 ? rows[fallbackIndex] : null;
+    }
+
+    return rows[fallbackIndex];
 }
 
 export function resolveChargeSummaryElements(keySuffix, part = 'value') {
@@ -114,6 +140,19 @@ export function resolveChargeSummaryElements(keySuffix, part = 'value') {
     if (part === 'row') return [row.row];
     if (part === 'label') return row.labelElement ? [row.labelElement] : [];
     return row.valueElement ? [row.valueElement] : [];
+}
+
+export function getChargeSummaryValue(element) {
+    if (!(element instanceof HTMLElement)) return '';
+    return normalizeInlineText(element.textContent);
+}
+
+export function setChargeSummaryValue(element, value) {
+    if (!(element instanceof HTMLElement)) return;
+    const nextValue = typeof value === 'string' && /<[^>]+>/.test(value)
+        ? extractInlineTextFromHtml(value)
+        : normalizeInlineText(value);
+    element.textContent = nextValue;
 }
 
 function getSellerInfoContainer() {

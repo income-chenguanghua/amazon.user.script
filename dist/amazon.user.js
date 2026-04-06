@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.46.1552
+// @version      26.46.1708
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
@@ -116,6 +116,37 @@
     }
     return results;
   }
+  function cleanupInlineEditingArtifacts(node) {
+    if (!(node instanceof Element)) return;
+    if (node.classList.contains("tm-inline-image-replace-trigger") || node.classList.contains("tm-inline-text-dialog-trigger")) {
+      node.remove();
+      return;
+    }
+    node.classList.remove("tm-inline-editing");
+    node.removeAttribute("data-tm-inline-editing");
+    node.removeAttribute("data-tm-inline-dialog-edit");
+    node.removeAttribute("contenteditable");
+  }
+  function getSanitizedElementClone(element) {
+    if (!(element instanceof Element)) return null;
+    const clone = element.cloneNode(true);
+    if (!(clone instanceof Element)) return null;
+    cleanupInlineEditingArtifacts(clone);
+    clone.querySelectorAll("*").forEach((node) => cleanupInlineEditingArtifacts(node));
+    return clone;
+  }
+  function sanitizeInlineEditingHtml(html) {
+    if (typeof html !== "string" || !html) return html;
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    template.content.childNodes.forEach((node) => {
+      if (node instanceof Element) {
+        cleanupInlineEditingArtifacts(node);
+        node.querySelectorAll("*").forEach((child) => cleanupInlineEditingArtifacts(child));
+      }
+    });
+    return template.innerHTML;
+  }
   function extractElementValue(element, config) {
     if (!element) return "";
     if (config && typeof config.getValue === "function") {
@@ -135,7 +166,8 @@
       return element.value;
     }
     if (element.childElementCount > 0) {
-      return element.innerHTML.trim();
+      const sanitizedClone = getSanitizedElementClone(element);
+      return sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
     }
     return (element.textContent || "").trim();
   }
@@ -165,8 +197,11 @@
     }
     const hasHtml = /<[^>]+>/.test(expected);
     if (hasHtml) {
-      if (element.innerHTML.trim() !== expected.trim()) {
-        element.innerHTML = expected;
+      const sanitizedExpected = sanitizeInlineEditingHtml(expected).trim();
+      const sanitizedClone = getSanitizedElementClone(element);
+      const currentHtml = sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
+      if (currentHtml !== sanitizedExpected) {
+        element.innerHTML = sanitizedExpected;
       }
     } else if ((element.textContent || "").trim() !== expected.trim()) {
       element.textContent = expected;
@@ -1062,6 +1097,7 @@
     charge_shipping: ["shipping", "shipping & handling", "delivery", "delivery charges", "运费", "配送", "送料", "livraison", "versand", "spedizione", "envio", "envío", "frete", "verzending", "frakt", "dostawa", "kargo"],
     charge_total_before_tax: ["total before tax", "before tax", "pretax", "税前", "avant taxes", "vor steuern", "antes de impuestos", "imposte escluse", "vergiler haric"],
     charge_estimated_tax: ["estimated tax", "estimated vat", "estimated gst", "tax to be collected", "vat to be collected", "税费", "税額", "consumption tax", "impuestos estimados", "taxe estimee", "voraussichtliche steuer", "imposta stimata", "szacowany podatek"],
+    charge_grand_total: ["grand total", "order total", "gesamtsumme", "总计", "合计", "付款总额", "importe total", "totale", "montant total", "gesamtkosten"],
     charge_refund_total: ["refund total", "refund", "退款", "返金", "払い戻し", "reembolso", "rimborso", "remboursement", "erstattung", "rückerstattung", "zwrot", "iade", "استرداد"]
   };
   const PRODUCT_OVERVIEW_BRAND_SELECTORS = [
@@ -1075,6 +1111,11 @@
   function normalizeInlineText(value) {
     return String(value || "").replace(/[\s\u00a0]+/g, " ").trim();
   }
+  function extractInlineTextFromHtml(value) {
+    const template = document.createElement("template");
+    template.innerHTML = String(value || "");
+    return normalizeInlineText(template.content.textContent);
+  }
   function getChargeSummaryRows() {
     const rows = [];
     const seen = new Set();
@@ -1084,7 +1125,14 @@
       candidates.forEach((row) => {
         if (!(row instanceof HTMLElement) || seen.has(row)) return;
         const labelElement = row.querySelector('.od-line-item-row-label, [class*="line-item-row-label"]');
-        const valueElement = row.querySelector('.od-line-item-row-content, [class*="line-item-row-content"]');
+        const valueContainerElement = row.querySelector('.od-line-item-row-content, [class*="line-item-row-content"]');
+        const valueElement = valueContainerElement instanceof HTMLElement ? pickPreferredValueElement(
+          Array.from(
+            valueContainerElement.querySelectorAll(
+              ".a-color-base, .a-size-base, .a-text-bold, span"
+            )
+          ).filter((element) => element instanceof HTMLElement)
+        ) || valueContainerElement : null;
         if (!(labelElement instanceof HTMLElement) || !(valueElement instanceof HTMLElement)) return;
         const labelText = normalizeTextContent(labelElement.textContent);
         const valueText = normalizeTextContent(valueElement.textContent);
@@ -1136,7 +1184,16 @@
       charge_estimated_tax: 3
     };
     const fallbackIndex = fallbackIndexMap[keySuffix];
-    return Number.isInteger(fallbackIndex) && rows[fallbackIndex] ? rows[fallbackIndex] : null;
+    if (!Number.isInteger(fallbackIndex) || !rows[fallbackIndex]) {
+      return null;
+    }
+    if (keySuffix === "charge_total_before_tax") {
+      return rows.length >= 4 ? rows[fallbackIndex] : null;
+    }
+    if (keySuffix === "charge_estimated_tax") {
+      return rows.length >= 5 ? rows[fallbackIndex] : null;
+    }
+    return rows[fallbackIndex];
   }
   function resolveChargeSummaryElements(keySuffix, part = "value") {
     const row = getChargeSummaryRowByKey(keySuffix);
@@ -1144,6 +1201,15 @@
     if (part === "row") return [row.row];
     if (part === "label") return row.labelElement ? [row.labelElement] : [];
     return row.valueElement ? [row.valueElement] : [];
+  }
+  function getChargeSummaryValue(element) {
+    if (!(element instanceof HTMLElement)) return "";
+    return normalizeInlineText(element.textContent);
+  }
+  function setChargeSummaryValue(element, value) {
+    if (!(element instanceof HTMLElement)) return;
+    const nextValue = typeof value === "string" && /<[^>]+>/.test(value) ? extractInlineTextFromHtml(value) : normalizeInlineText(value);
+    element.textContent = nextValue;
   }
   function getSellerInfoContainer() {
     return document.querySelector("#page-section-detail-seller-info .a-box-inner");
@@ -1721,51 +1787,56 @@
     {
       name: "小计",
       keySuffix: "charge_subtotal",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(1) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_subtotal")
+      resolveElements: () => resolveChargeSummaryElements("charge_subtotal"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "运费",
       keySuffix: "charge_shipping",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(2) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_shipping")
+      resolveElements: () => resolveChargeSummaryElements("charge_shipping"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "税前总计",
       keySuffix: "charge_total_before_tax",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(3) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_total_before_tax")
+      resolveElements: () => resolveChargeSummaryElements("charge_total_before_tax"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "预估税费",
       keySuffix: "charge_estimated_tax",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(4) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_estimated_tax")
+      resolveElements: () => resolveChargeSummaryElements("charge_estimated_tax"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "总计",
       keySuffix: "charge_grand_total",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(5) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_grand_total")
+      resolveElements: () => resolveChargeSummaryElements("charge_grand_total"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "退款总计标签",
       keySuffix: "charge_refund_total_label",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(6) .od-line-item-row-label .a-size-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
       resolveElements: () => resolveChargeSummaryElements("charge_refund_total_label", "label")
     },
     {
       name: "退款总计",
       keySuffix: "charge_refund_total",
-      selector: '[data-component="chargeSummary"] li:nth-of-type(6) .od-line-item-row-content .a-color-base',
       watchSelectors: ['[data-component="chargeSummary"]'],
-      resolveElements: () => resolveChargeSummaryElements("charge_refund_total")
+      resolveElements: () => resolveChargeSummaryElements("charge_refund_total"),
+      getValue: getChargeSummaryValue,
+      setValue: setChargeSummaryValue
     },
     {
       name: "商品标题",

@@ -1,11 +1,13 @@
 import {
     getPaymentCardEndingValue,
+    getChargeSummaryValue,
     resolveBusinessAddressElements,
     resolveBusinessNameElements,
     resolveChargeSummaryElements,
     resolveOfferDisplayBrandElements,
     resolvePaymentCardEndingElements,
     resolveProductOverviewBrandElements,
+    setChargeSummaryValue,
     setPaymentCardEndingValue
 } from '../features/resolvers.js';
 
@@ -69,51 +71,56 @@ export const defaultFieldConfigs = [
     {
         name: '小计',
         keySuffix: 'charge_subtotal',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(1) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_subtotal')
+        resolveElements: () => resolveChargeSummaryElements('charge_subtotal'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '运费',
         keySuffix: 'charge_shipping',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(2) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_shipping')
+        resolveElements: () => resolveChargeSummaryElements('charge_shipping'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '税前总计',
         keySuffix: 'charge_total_before_tax',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(3) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_total_before_tax')
+        resolveElements: () => resolveChargeSummaryElements('charge_total_before_tax'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '预估税费',
         keySuffix: 'charge_estimated_tax',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(4) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_estimated_tax')
+        resolveElements: () => resolveChargeSummaryElements('charge_estimated_tax'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '总计',
         keySuffix: 'charge_grand_total',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(5) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_grand_total')
+        resolveElements: () => resolveChargeSummaryElements('charge_grand_total'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '退款总计标签',
         keySuffix: 'charge_refund_total_label',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(6) .od-line-item-row-label .a-size-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
         resolveElements: () => resolveChargeSummaryElements('charge_refund_total_label', 'label')
     },
     {
         name: '退款总计',
         keySuffix: 'charge_refund_total',
-        selector: '[data-component="chargeSummary"] li:nth-of-type(6) .od-line-item-row-content .a-color-base',
         watchSelectors: ['[data-component="chargeSummary"]'],
-        resolveElements: () => resolveChargeSummaryElements('charge_refund_total')
+        resolveElements: () => resolveChargeSummaryElements('charge_refund_total'),
+        getValue: getChargeSummaryValue,
+        setValue: setChargeSummaryValue
     },
     {
         name: '商品标题',

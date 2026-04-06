@@ -120,6 +120,47 @@ export function collectElementsFromConfig(config) {
     return results;
 }
 
+function cleanupInlineEditingArtifacts(node) {
+    if (!(node instanceof Element)) return;
+
+    if (
+        node.classList.contains('tm-inline-image-replace-trigger') ||
+        node.classList.contains('tm-inline-text-dialog-trigger')
+    ) {
+        node.remove();
+        return;
+    }
+
+    node.classList.remove('tm-inline-editing');
+    node.removeAttribute('data-tm-inline-editing');
+    node.removeAttribute('data-tm-inline-dialog-edit');
+    node.removeAttribute('contenteditable');
+}
+
+function getSanitizedElementClone(element) {
+    if (!(element instanceof Element)) return null;
+
+    const clone = element.cloneNode(true);
+    if (!(clone instanceof Element)) return null;
+
+    cleanupInlineEditingArtifacts(clone);
+    clone.querySelectorAll('*').forEach((node) => cleanupInlineEditingArtifacts(node));
+    return clone;
+}
+
+function sanitizeInlineEditingHtml(html) {
+    if (typeof html !== 'string' || !html) return html;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    template.content.childNodes.forEach((node) => {
+        if (node instanceof Element) {
+            cleanupInlineEditingArtifacts(node);
+            node.querySelectorAll('*').forEach((child) => cleanupInlineEditingArtifacts(child));
+        }
+    });
+    return template.innerHTML;
+}
+
 export function extractElementValue(element, config) {
     if (!element) return '';
 
@@ -143,7 +184,8 @@ export function extractElementValue(element, config) {
     }
 
     if (element.childElementCount > 0) {
-        return element.innerHTML.trim();
+        const sanitizedClone = getSanitizedElementClone(element);
+        return sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
     }
 
     return (element.textContent || '').trim();
@@ -179,8 +221,11 @@ export function applyElementValue(element, value, config) {
 
     const hasHtml = /<[^>]+>/.test(expected);
     if (hasHtml) {
-        if (element.innerHTML.trim() !== expected.trim()) {
-            element.innerHTML = expected;
+        const sanitizedExpected = sanitizeInlineEditingHtml(expected).trim();
+        const sanitizedClone = getSanitizedElementClone(element);
+        const currentHtml = sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
+        if (currentHtml !== sanitizedExpected) {
+            element.innerHTML = sanitizedExpected;
         }
     } else if ((element.textContent || '').trim() !== expected.trim()) {
         element.textContent = expected;
