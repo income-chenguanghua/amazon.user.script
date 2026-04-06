@@ -121,18 +121,18 @@ export function collectEditedValues(manager) {
 
         if (config.multiple) {
             if (elements.length > 0) {
-                values[storageKey] = elements.map((element) => extractElementValue(element));
+                values[storageKey] = elements.map((element) => extractElementValue(element, config));
             }
             return;
         }
 
-        const changedElement = getEditedElementWithChangedValue(elements, manager.editedElements);
+        const changedElement = getEditedElementWithChangedValue(elements, manager.editedElements, config);
         const preferredElement = changedElement || pickPreferredValueElement(elements);
         if (!preferredElement) {
             return;
         }
 
-        const value = extractElementValue(preferredElement);
+        const value = extractElementValue(preferredElement, config);
         if (value !== undefined && value !== null) {
             values[storageKey] = value;
         }

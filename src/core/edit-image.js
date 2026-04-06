@@ -1,4 +1,5 @@
 import {
+    applyElementValue,
     applyImageSource,
     extractElementValue
 } from './utils.js';
@@ -66,17 +67,8 @@ export function findDialogTriggerHost(element) {
     return element;
 }
 
-export function applyDialogValueToElement(element, value) {
-    const nextValue = typeof value === 'string' ? value : String(value ?? '');
-
-    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-        element.value = nextValue;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        return;
-    }
-
-    element.textContent = nextValue;
+export function applyDialogValueToElement(element, value, config) {
+    applyElementValue(element, value, config);
 }
 
 export function makeEditable(manager, element, config) {
@@ -96,7 +88,7 @@ export function makeEditable(manager, element, config) {
         isInput,
         usesDialogTrigger,
         noHighlight,
-        originalValue: extractElementValue(element),
+        originalValue: extractElementValue(element, config),
         disabled: isInput ? element.disabled : undefined,
         readOnly: isInput ? element.readOnly : undefined,
         originalReadonlyAttr: isInput ? element.getAttribute('readonly') : null,
@@ -177,7 +169,7 @@ export function makeEditable(manager, element, config) {
             }
 
             const fieldName = config && config.name ? config.name : '内容';
-            const currentValue = extractElementValue(element);
+            const currentValue = extractElementValue(element, config);
             const nextValue = window.prompt(`请输入新的${fieldName}：`, currentValue);
             if (nextValue === null) return;
 
@@ -186,7 +178,7 @@ export function makeEditable(manager, element, config) {
                 return;
             }
 
-            applyDialogValueToElement(element, nextValue);
+            applyDialogValueToElement(element, nextValue, config);
             manager.notification.show(`${fieldName}已更新，点击“完成”保存。`, 'success');
         };
 

@@ -1,5 +1,5 @@
 import {
-    applyImageSource,
+    applyElementValue,
     collectElementsFromConfig,
     getConfigSelectorList,
     getConfigWatchSelectorList
@@ -193,7 +193,7 @@ export class TextObserver {
                         if (!element) return;
                         if (element.dataset && element.dataset.tmInlineEditing === '1') return;
                         if (values[index] === undefined) return;
-                        this.applyValueToElement(element, values[index], item.type);
+                        this.applyValueToElement(element, values[index], item);
                     });
                     return;
                 }
@@ -201,7 +201,7 @@ export class TextObserver {
                 elements.forEach((element) => {
                     if (!element) return;
                     if (element.dataset && element.dataset.tmInlineEditing === '1') return;
-                    this.applyValueToElement(element, item.value, item.type);
+                    this.applyValueToElement(element, item.value, item);
                 });
             });
         } finally {
@@ -210,33 +210,8 @@ export class TextObserver {
         }
     }
 
-    applyValueToElement(element, value, type = 'text') {
-        if (value === undefined || value === null) return;
-        const expected = typeof value === 'string' ? value : String(value);
-
-        if (type === 'image' || element instanceof HTMLImageElement) {
-            if (!(element instanceof HTMLImageElement)) return;
-            applyImageSource(element, expected);
-            return;
-        }
-
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-            if (element.value !== expected) {
-                element.value = expected;
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            return;
-        }
-
-        const hasHtml = /<[^>]+>/.test(expected);
-        if (hasHtml) {
-            if (element.innerHTML.trim() !== expected.trim()) {
-                element.innerHTML = expected;
-            }
-        } else if ((element.textContent || '').trim() !== expected.trim()) {
-            element.textContent = expected;
-        }
+    applyValueToElement(element, value, config = {}) {
+        applyElementValue(element, value, config);
     }
 
     setupMutationObserver() {

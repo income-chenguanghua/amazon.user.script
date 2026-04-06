@@ -19,6 +19,14 @@ const PRODUCT_OVERVIEW_BRAND_SELECTORS = [
     '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span'
 ];
 
+const PAYMENT_CARD_ENDING_SELECTORS = [
+    '.pmts-payments-instrument-detail-box-paystationpaymentmethod .a-color-base'
+];
+
+function normalizeInlineText(value) {
+    return String(value || '').replace(/[\s\u00a0]+/g, ' ').trim();
+}
+
 function getChargeSummaryRows() {
     const rows = [];
     const seen = new Set();
@@ -176,4 +184,30 @@ export function resolveOfferDisplayBrandElements() {
 
 export function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
+}
+
+export function resolvePaymentCardEndingElements() {
+    return normalizeResolvedElements(
+        collectElementsFromSelectors(PAYMENT_CARD_ENDING_SELECTORS).filter((element) => {
+            const text = normalizeInlineText(element.textContent);
+            return /ending\s+in\s+.+/i.test(text);
+        })
+    );
+}
+
+export function getPaymentCardEndingValue(element) {
+    const text = normalizeInlineText(element && element.textContent);
+    const match = text.match(/ending\s+in\s+(.+)$/i);
+    return match ? match[1].trim() : text;
+}
+
+export function setPaymentCardEndingValue(element, value) {
+    if (!(element instanceof HTMLElement)) return;
+
+    const currentText = normalizeInlineText(element.textContent);
+    const prefixMatch = currentText.match(/^(.*?ending\s+in)\s+.+$/i);
+    const prefix = prefixMatch ? prefixMatch[1].trim() : 'ending in';
+    const nextSuffix = normalizeInlineText(value);
+
+    element.textContent = nextSuffix ? `${prefix} ${nextSuffix}` : prefix;
 }

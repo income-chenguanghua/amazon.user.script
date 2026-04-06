@@ -120,8 +120,19 @@ export function collectElementsFromConfig(config) {
     return results;
 }
 
-export function extractElementValue(element) {
+export function extractElementValue(element, config) {
     if (!element) return '';
+
+    if (config && typeof config.getValue === 'function') {
+        try {
+            const customValue = config.getValue(element);
+            if (customValue !== undefined) {
+                return customValue;
+            }
+        } catch (error) {
+            console.warn('自定义字段取值失败:', config.keySuffix || config.name || element, error);
+        }
+    }
 
     if (element instanceof HTMLImageElement) {
         return element.src || '';
@@ -136,6 +147,44 @@ export function extractElementValue(element) {
     }
 
     return (element.textContent || '').trim();
+}
+
+export function applyElementValue(element, value, config) {
+    if (!element || value === undefined || value === null) return;
+    const expected = typeof value === 'string' ? value : String(value);
+
+    if (config && typeof config.setValue === 'function') {
+        try {
+            config.setValue(element, expected);
+            return;
+        } catch (error) {
+            console.warn('自定义字段写值失败:', config.keySuffix || config.name || element, error);
+        }
+    }
+
+    if ((config && config.type === 'image') || element instanceof HTMLImageElement) {
+        if (!(element instanceof HTMLImageElement)) return;
+        applyImageSource(element, expected);
+        return;
+    }
+
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+        if (element.value !== expected) {
+            element.value = expected;
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return;
+    }
+
+    const hasHtml = /<[^>]+>/.test(expected);
+    if (hasHtml) {
+        if (element.innerHTML.trim() !== expected.trim()) {
+            element.innerHTML = expected;
+        }
+    } else if ((element.textContent || '').trim() !== expected.trim()) {
+        element.textContent = expected;
+    }
 }
 
 export function isElementLikelyVisible(element) {
@@ -158,7 +207,7 @@ export function pickPreferredValueElement(elements) {
     return visibleElement || elements[0] || null;
 }
 
-export function getEditedElementWithChangedValue(elements, editedElements) {
+export function getEditedElementWithChangedValue(elements, editedElements, config) {
     if (!Array.isArray(elements) || elements.length === 0 || !(editedElements instanceof Map)) {
         return null;
     }
@@ -169,7 +218,7 @@ export function getEditedElementWithChangedValue(elements, editedElements) {
             continue;
         }
 
-        const currentValue = extractElementValue(element);
+        const currentValue = extractElementValue(element, config);
         if (!isEqualValue(state.originalValue, currentValue)) {
             return element;
         }

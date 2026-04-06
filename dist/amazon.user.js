@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.43.1937
+// @version      26.46.1552
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
@@ -116,8 +116,18 @@
     }
     return results;
   }
-  function extractElementValue(element) {
+  function extractElementValue(element, config) {
     if (!element) return "";
+    if (config && typeof config.getValue === "function") {
+      try {
+        const customValue = config.getValue(element);
+        if (customValue !== void 0) {
+          return customValue;
+        }
+      } catch (error) {
+        console.warn("自定义字段取值失败:", config.keySuffix || config.name || element, error);
+      }
+    }
     if (element instanceof HTMLImageElement) {
       return element.src || "";
     }
@@ -128,6 +138,39 @@
       return element.innerHTML.trim();
     }
     return (element.textContent || "").trim();
+  }
+  function applyElementValue(element, value, config) {
+    if (!element || value === void 0 || value === null) return;
+    const expected = typeof value === "string" ? value : String(value);
+    if (config && typeof config.setValue === "function") {
+      try {
+        config.setValue(element, expected);
+        return;
+      } catch (error) {
+        console.warn("自定义字段写值失败:", config.keySuffix || config.name || element, error);
+      }
+    }
+    if (config && config.type === "image" || element instanceof HTMLImageElement) {
+      if (!(element instanceof HTMLImageElement)) return;
+      applyImageSource(element, expected);
+      return;
+    }
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+      if (element.value !== expected) {
+        element.value = expected;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return;
+    }
+    const hasHtml = /<[^>]+>/.test(expected);
+    if (hasHtml) {
+      if (element.innerHTML.trim() !== expected.trim()) {
+        element.innerHTML = expected;
+      }
+    } else if ((element.textContent || "").trim() !== expected.trim()) {
+      element.textContent = expected;
+    }
   }
   function isElementLikelyVisible(element) {
     if (!(element instanceof HTMLElement)) return false;
@@ -144,7 +187,7 @@
     const visibleElement = elements.find((element) => isElementLikelyVisible(element));
     return visibleElement || elements[0] || null;
   }
-  function getEditedElementWithChangedValue(elements, editedElements) {
+  function getEditedElementWithChangedValue(elements, editedElements, config) {
     if (!Array.isArray(elements) || elements.length === 0 || !(editedElements instanceof Map)) {
       return null;
     }
@@ -153,7 +196,7 @@
       if (!state || !Object.prototype.hasOwnProperty.call(state, "originalValue")) {
         continue;
       }
-      const currentValue = extractElementValue(element);
+      const currentValue = extractElementValue(element, config);
       if (!isEqualValue(state.originalValue, currentValue)) {
         return element;
       }
@@ -648,15 +691,8 @@
     }
     return element;
   }
-  function applyDialogValueToElement(element, value) {
-    const nextValue = typeof value === "string" ? value : String(value ?? "");
-    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-      element.value = nextValue;
-      element.dispatchEvent(new Event("input", { bubbles: true }));
-      element.dispatchEvent(new Event("change", { bubbles: true }));
-      return;
-    }
-    element.textContent = nextValue;
+  function applyDialogValueToElement(element, value, config) {
+    applyElementValue(element, value, config);
   }
   function makeEditable(manager, element, config) {
     if (!element || manager.editedElements.has(element)) return;
@@ -671,7 +707,7 @@
       isInput,
       usesDialogTrigger,
       noHighlight,
-      originalValue: extractElementValue(element),
+      originalValue: extractElementValue(element, config),
       disabled: isInput ? element.disabled : void 0,
       readOnly: isInput ? element.readOnly : void 0,
       originalReadonlyAttr: isInput ? element.getAttribute("readonly") : null,
@@ -746,14 +782,14 @@
           }
         }
         const fieldName = config && config.name ? config.name : "内容";
-        const currentValue = extractElementValue(element);
+        const currentValue = extractElementValue(element, config);
         const nextValue = window.prompt(`请输入新的${fieldName}：`, currentValue);
         if (nextValue === null) return;
         if (nextValue === currentValue) {
           manager.notification.show(`${fieldName}未发生变化。`, "info");
           return;
         }
-        applyDialogValueToElement(element, nextValue);
+        applyDialogValueToElement(element, nextValue, config);
         manager.notification.show(`${fieldName}已更新，点击“完成”保存。`, "success");
       };
       const host = findDialogTriggerHost(element);
@@ -1005,16 +1041,16 @@
       const elements = manager.resolveElementsFromConfig(config);
       if (config.multiple) {
         if (elements.length > 0) {
-          values[storageKey] = elements.map((element) => extractElementValue(element));
+          values[storageKey] = elements.map((element) => extractElementValue(element, config));
         }
         return;
       }
-      const changedElement = getEditedElementWithChangedValue(elements, manager.editedElements);
+      const changedElement = getEditedElementWithChangedValue(elements, manager.editedElements, config);
       const preferredElement = changedElement || pickPreferredValueElement(elements);
       if (!preferredElement) {
         return;
       }
-      const value = extractElementValue(preferredElement);
+      const value = extractElementValue(preferredElement, config);
       if (value !== void 0 && value !== null) {
         values[storageKey] = value;
       }
@@ -1033,6 +1069,12 @@
     "#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span",
     "#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span"
   ];
+  const PAYMENT_CARD_ENDING_SELECTORS = [
+    ".pmts-payments-instrument-detail-box-paystationpaymentmethod .a-color-base"
+  ];
+  function normalizeInlineText(value) {
+    return String(value || "").replace(/[\s\u00a0]+/g, " ").trim();
+  }
   function getChargeSummaryRows() {
     const rows = [];
     const seen = new Set();
@@ -1162,6 +1204,27 @@
   }
   function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
+  }
+  function resolvePaymentCardEndingElements() {
+    return normalizeResolvedElements(
+      collectElementsFromSelectors(PAYMENT_CARD_ENDING_SELECTORS).filter((element) => {
+        const text = normalizeInlineText(element.textContent);
+        return /ending\s+in\s+.+/i.test(text);
+      })
+    );
+  }
+  function getPaymentCardEndingValue(element) {
+    const text = normalizeInlineText(element && element.textContent);
+    const match = text.match(/ending\s+in\s+(.+)$/i);
+    return match ? match[1].trim() : text;
+  }
+  function setPaymentCardEndingValue(element, value) {
+    if (!(element instanceof HTMLElement)) return;
+    const currentText = normalizeInlineText(element.textContent);
+    const prefixMatch = currentText.match(/^(.*?ending\s+in)\s+.+$/i);
+    const prefix = prefixMatch ? prefixMatch[1].trim() : "ending in";
+    const nextSuffix = normalizeInlineText(value);
+    element.textContent = nextSuffix ? `${prefix} ${nextSuffix}` : prefix;
   }
   function setButtonLabel(button, label) {
     if (!button) return;
@@ -1540,6 +1603,8 @@
           resolveElements: typeof config.resolveElements === "function" ? () => this.resolveElementsFromConfig(config) : void 0,
           multiple: Boolean(config.multiple),
           type: config.type,
+          getValue: typeof config.getValue === "function" ? config.getValue : void 0,
+          setValue: typeof config.setValue === "function" ? config.setValue : void 0,
           value
         });
         return result;
@@ -1635,6 +1700,17 @@
         ".rcx-checkout-delivery-option-a-control-row .delivery-option-text"
       ],
       multiple: true
+    },
+    {
+      name: "信用卡尾号",
+      keySuffix: "payment_card_last4",
+      watchSelectors: [".pmts-payments-instrument-list"],
+      resolveElements: () => resolvePaymentCardEndingElements(),
+      multiple: true,
+      editMode: "dialog",
+      dialogButtonLabel: "改",
+      getValue: getPaymentCardEndingValue,
+      setValue: setPaymentCardEndingValue
     },
     {
       name: "发货信息",
@@ -2056,14 +2132,14 @@
               if (!element) return;
               if (element.dataset && element.dataset.tmInlineEditing === "1") return;
               if (values[index] === void 0) return;
-              this.applyValueToElement(element, values[index], item.type);
+              this.applyValueToElement(element, values[index], item);
             });
             return;
           }
           elements.forEach((element) => {
             if (!element) return;
             if (element.dataset && element.dataset.tmInlineEditing === "1") return;
-            this.applyValueToElement(element, item.value, item.type);
+            this.applyValueToElement(element, item.value, item);
           });
         });
       } finally {
@@ -2071,30 +2147,8 @@
         this.lastApplyAt = Date.now();
       }
     }
-    applyValueToElement(element, value, type = "text") {
-      if (value === void 0 || value === null) return;
-      const expected = typeof value === "string" ? value : String(value);
-      if (type === "image" || element instanceof HTMLImageElement) {
-        if (!(element instanceof HTMLImageElement)) return;
-        applyImageSource(element, expected);
-        return;
-      }
-      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
-        if (element.value !== expected) {
-          element.value = expected;
-          element.dispatchEvent(new Event("input", { bubbles: true }));
-          element.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        return;
-      }
-      const hasHtml = /<[^>]+>/.test(expected);
-      if (hasHtml) {
-        if (element.innerHTML.trim() !== expected.trim()) {
-          element.innerHTML = expected;
-        }
-      } else if ((element.textContent || "").trim() !== expected.trim()) {
-        element.textContent = expected;
-      }
+    applyValueToElement(element, value, config = {}) {
+      applyElementValue(element, value, config);
     }
     setupMutationObserver() {
       if (this.mutationObserver) return;

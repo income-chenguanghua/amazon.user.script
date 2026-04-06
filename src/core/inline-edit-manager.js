@@ -292,6 +292,8 @@ export class InlineEditManager {
                     : undefined,
                 multiple: Boolean(config.multiple),
                 type: config.type,
+                getValue: typeof config.getValue === 'function' ? config.getValue : undefined,
+                setValue: typeof config.setValue === 'function' ? config.setValue : undefined,
                 value
             });
             return result;

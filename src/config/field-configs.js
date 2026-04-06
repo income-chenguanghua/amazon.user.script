@@ -1,9 +1,12 @@
 import {
+    getPaymentCardEndingValue,
     resolveBusinessAddressElements,
     resolveBusinessNameElements,
     resolveChargeSummaryElements,
     resolveOfferDisplayBrandElements,
-    resolveProductOverviewBrandElements
+    resolvePaymentCardEndingElements,
+    resolveProductOverviewBrandElements,
+    setPaymentCardEndingValue
 } from '../features/resolvers.js';
 
 export const defaultFieldConfigs = [
@@ -45,6 +48,17 @@ export const defaultFieldConfigs = [
             '.rcx-checkout-delivery-option-a-control-row .delivery-option-text'
         ],
         multiple: true
+    },
+    {
+        name: '信用卡尾号',
+        keySuffix: 'payment_card_last4',
+        watchSelectors: ['.pmts-payments-instrument-list'],
+        resolveElements: () => resolvePaymentCardEndingElements(),
+        multiple: true,
+        editMode: 'dialog',
+        dialogButtonLabel: '改',
+        getValue: getPaymentCardEndingValue,
+        setValue: setPaymentCardEndingValue
     },
     {
         name: '发货信息',
