@@ -54,7 +54,10 @@ export const defaultFieldConfigs = [
     {
         name: '信用卡尾号',
         keySuffix: 'payment_card_last4',
-        watchSelectors: ['.pmts-payments-instrument-list'],
+        watchSelectors: [
+            '.pmts-payments-instrument-list',
+            '[data-testid="payment-instrument-text-wrapper"]'
+        ],
         resolveElements: () => resolvePaymentCardEndingElements(),
         multiple: true,
         editMode: 'dialog',

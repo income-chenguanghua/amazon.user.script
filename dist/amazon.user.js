@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.46.1710
+// @version      26.47.1744
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
@@ -1105,9 +1105,11 @@
     "#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span",
     "#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span"
   ];
-  const PAYMENT_CARD_ENDING_SELECTORS = [
+  const LEGACY_PAYMENT_CARD_ENDING_SELECTORS = [
     ".pmts-payments-instrument-detail-box-paystationpaymentmethod .a-color-base"
   ];
+  const MODERN_PAYMENT_CARD_TEXT_WRAPPER_SELECTOR = '[data-testid="payment-instrument-text-wrapper"]';
+  const MODERN_PAYMENT_CARD_NUMBER_SELECTOR = '[data-testid="payment-instrument-number"]';
   function normalizeInlineText(value) {
     return String(value || "").replace(/[\s\u00a0]+/g, " ").trim();
   }
@@ -1271,25 +1273,51 @@
   function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
   }
+  function getModernPaymentCardNumberElement(element) {
+    if (!(element instanceof HTMLElement)) return null;
+    if (element.matches(MODERN_PAYMENT_CARD_NUMBER_SELECTOR)) {
+      return element;
+    }
+    const numberElement = element.querySelector(MODERN_PAYMENT_CARD_NUMBER_SELECTOR);
+    return numberElement instanceof HTMLElement ? numberElement : null;
+  }
+  function normalizePaymentCardEndingValue(value) {
+    const normalized = normalizeInlineText(value);
+    if (!normalized) return "";
+    const trailingMatch = normalized.match(/(?:ending\s+in|[•*]{2,})\s*(.+)$/i);
+    return trailingMatch ? trailingMatch[1].trim() : normalized;
+  }
   function resolvePaymentCardEndingElements() {
-    return normalizeResolvedElements(
-      collectElementsFromSelectors(PAYMENT_CARD_ENDING_SELECTORS).filter((element) => {
-        const text = normalizeInlineText(element.textContent);
-        return /ending\s+in\s+.+/i.test(text);
-      })
-    );
+    const legacyElements = collectElementsFromSelectors(LEGACY_PAYMENT_CARD_ENDING_SELECTORS).filter((element) => {
+      const text = normalizeInlineText(element.textContent);
+      return /ending\s+in\s+.+/i.test(text);
+    });
+    const modernElements = collectElementsFromSelectors([MODERN_PAYMENT_CARD_TEXT_WRAPPER_SELECTOR]).map((wrapper) => getModernPaymentCardNumberElement(wrapper)).filter((element) => {
+      const text = normalizeInlineText(element.textContent);
+      return Boolean(text);
+    });
+    return normalizeResolvedElements([...legacyElements, ...modernElements]);
   }
   function getPaymentCardEndingValue(element) {
+    const modernNumberElement = getModernPaymentCardNumberElement(element);
+    if (modernNumberElement) {
+      return normalizePaymentCardEndingValue(modernNumberElement.textContent);
+    }
     const text = normalizeInlineText(element && element.textContent);
     const match = text.match(/ending\s+in\s+(.+)$/i);
     return match ? match[1].trim() : text;
   }
   function setPaymentCardEndingValue(element, value) {
     if (!(element instanceof HTMLElement)) return;
+    const nextSuffix = normalizePaymentCardEndingValue(value);
+    const modernNumberElement = getModernPaymentCardNumberElement(element);
+    if (modernNumberElement) {
+      modernNumberElement.textContent = nextSuffix;
+      return;
+    }
     const currentText = normalizeInlineText(element.textContent);
     const prefixMatch = currentText.match(/^(.*?ending\s+in)\s+.+$/i);
     const prefix = prefixMatch ? prefixMatch[1].trim() : "ending in";
-    const nextSuffix = normalizeInlineText(value);
     element.textContent = nextSuffix ? `${prefix} ${nextSuffix}` : prefix;
   }
   function setButtonLabel(button, label) {
@@ -1770,7 +1798,10 @@
     {
       name: "信用卡尾号",
       keySuffix: "payment_card_last4",
-      watchSelectors: [".pmts-payments-instrument-list"],
+      watchSelectors: [
+        ".pmts-payments-instrument-list",
+        '[data-testid="payment-instrument-text-wrapper"]'
+      ],
       resolveElements: () => resolvePaymentCardEndingElements(),
       multiple: true,
       editMode: "dialog",
