@@ -152,7 +152,7 @@ export function hideButton(manager) {
     document.body.classList.remove('tm-editing-mode');
     manager.storage.savePersistent('hidden', true);
     manager.container.style.display = 'none';
-    manager.notification.show('编辑按钮已隐藏，在控制台执行 show() 可重新显示。', 'info');
+    manager.notification.show('编辑按钮已隐藏，在控制台执行 tmInlineEditor.show() 可重新显示。', 'info');
 }
 
 export function showButton(manager) {

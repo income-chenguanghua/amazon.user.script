@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.47.1744
+// @version      26.417.1729
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
@@ -22,6 +22,101 @@
   var _GM_getValue = (() => typeof GM_getValue != "undefined" ? GM_getValue : void 0)();
   var _GM_setValue = (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
   var _unsafeWindow = (() => typeof unsafeWindow != "undefined" ? unsafeWindow : void 0)();
+  const DEBUG_STORAGE_KEY = "tmInlineDebug";
+  function getLocalStorage() {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      return null;
+    }
+  }
+  function isDebugEnabled() {
+    const storage = getLocalStorage();
+    return Boolean(storage && storage.getItem(DEBUG_STORAGE_KEY) === "1");
+  }
+  function setDebugEnabled(enabled) {
+    const storage = getLocalStorage();
+    if (!storage) return false;
+    if (enabled) {
+      storage.setItem(DEBUG_STORAGE_KEY, "1");
+    } else {
+      storage.removeItem(DEBUG_STORAGE_KEY);
+    }
+    return true;
+  }
+  function summarizeElement(element) {
+    if (!(element instanceof Element)) {
+      return String(element);
+    }
+    const tagName = element.tagName.toLowerCase();
+    const id = element.id ? `#${element.id}` : "";
+    const className = element.classList && element.classList.length > 0 ? `.${Array.from(element.classList).slice(0, 3).join(".")}` : "";
+    const dataComponent = element.getAttribute("data-component");
+    const dataPart = dataComponent ? `[data-component="${dataComponent}"]` : "";
+    return `${tagName}${id}${className}${dataPart}`;
+  }
+  function summarizeNode(node) {
+    if (node instanceof Element) {
+      return summarizeElement(node);
+    }
+    if (node instanceof Text) {
+      return `#text("${String(node.textContent || "").trim().slice(0, 40)}")`;
+    }
+    return String(node && node.nodeName ? node.nodeName : node);
+  }
+  function formatValue(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => formatValue(item));
+    }
+    if (typeof value !== "string") {
+      return value;
+    }
+    return value.length > 160 ? `${value.slice(0, 160)}...` : value;
+  }
+  function summarizeMutations(mutations, limit = 5) {
+    if (!Array.isArray(mutations)) {
+      return null;
+    }
+    return mutations.slice(0, limit).map((mutation) => ({
+      type: mutation.type,
+      target: summarizeNode(mutation.target),
+      added: Array.from(mutation.addedNodes || []).slice(0, 3).map((node) => summarizeNode(node)),
+      removed: Array.from(mutation.removedNodes || []).slice(0, 3).map((node) => summarizeNode(node))
+    }));
+  }
+  function logDebug(event, details = {}) {
+    if (!isDebugEnabled()) return;
+    const titleParts = [`[tm-inline][${event}]`];
+    if (details.writer) {
+      titleParts.push(details.writer);
+    }
+    if (details.field) {
+      titleParts.push(`field=${details.field}`);
+    }
+    console.groupCollapsed(titleParts.join(" "));
+    if (details.reason) {
+      console.log("reason:", details.reason);
+    }
+    if (details.element) {
+      console.log("element:", summarizeElement(details.element), details.element);
+    }
+    if (details.current !== void 0 || details.next !== void 0) {
+      console.log("value:", {
+        current: formatValue(details.current),
+        next: formatValue(details.next)
+      });
+    }
+    if (details.summary) {
+      console.log("summary:", details.summary);
+    }
+    if (details.data) {
+      console.log("data:", details.data);
+    }
+    if (details.trace) {
+      console.trace("stack");
+    }
+    console.groupEnd();
+  }
   function normalizeTextContent(value) {
     let text = String(value || "");
     try {
@@ -174,9 +269,22 @@
   function applyElementValue(element, value, config) {
     if (!element || value === void 0 || value === null) return;
     const expected = typeof value === "string" ? value : String(value);
+    const fieldName = config && (config.keySuffix || config.name);
     if (config && typeof config.setValue === "function") {
       try {
+        const currentValue = extractElementValue(element, config);
         config.setValue(element, expected);
+        const nextValue = extractElementValue(element, config);
+        if (!isEqualValue(currentValue, nextValue)) {
+          logDebug("dom-write", {
+            writer: "custom-setValue",
+            field: fieldName,
+            element,
+            current: currentValue,
+            next: nextValue,
+            trace: true
+          });
+        }
         return;
       } catch (error) {
         console.warn("自定义字段写值失败:", config.keySuffix || config.name || element, error);
@@ -184,14 +292,23 @@
     }
     if (config && config.type === "image" || element instanceof HTMLImageElement) {
       if (!(element instanceof HTMLImageElement)) return;
-      applyImageSource(element, expected);
+      applyImageSource(element, expected, fieldName);
       return;
     }
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
       if (element.value !== expected) {
+        const currentValue = element.value;
         element.value = expected;
         element.dispatchEvent(new Event("input", { bubbles: true }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
+        logDebug("dom-write", {
+          writer: "input-value",
+          field: fieldName,
+          element,
+          current: currentValue,
+          next: expected,
+          trace: true
+        });
       }
       return;
     }
@@ -202,9 +319,26 @@
       const currentHtml = sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
       if (currentHtml !== sanitizedExpected) {
         element.innerHTML = sanitizedExpected;
+        logDebug("dom-write", {
+          writer: "innerHTML",
+          field: fieldName,
+          element,
+          current: currentHtml,
+          next: sanitizedExpected,
+          trace: true
+        });
       }
     } else if ((element.textContent || "").trim() !== expected.trim()) {
+      const currentText = (element.textContent || "").trim();
       element.textContent = expected;
+      logDebug("dom-write", {
+        writer: "textContent",
+        field: fieldName,
+        element,
+        current: currentText,
+        next: expected,
+        trace: true
+      });
     }
   }
   function isElementLikelyVisible(element) {
@@ -364,12 +498,21 @@
       element.classList.add("tm-inline-main-fixed-image");
     }
   }
-  function applyImageSource(element, expected) {
+  function applyImageSource(element, expected, fieldName = "image") {
     if (!(element instanceof HTMLImageElement)) return;
     const sameSource = element.src === expected;
     const alreadyApplied = element.dataset && element.dataset.tmInlineAppliedSrc === expected;
     if (!sameSource) {
+      const currentSource = element.src;
       element.src = expected;
+      logDebug("dom-write", {
+        writer: "image-src",
+        field: fieldName,
+        element,
+        current: currentSource,
+        next: expected,
+        trace: true
+      });
     }
     if (!alreadyApplied) {
       element.removeAttribute("srcset");
@@ -624,39 +767,6 @@
     }
     setPanelOpen(manager, false);
   }
-  function injectShowFunction(manager) {
-    const showHandler = () => manager.showButton();
-    try {
-      window.show = showHandler;
-    } catch (error) {
-      console.warn("无法将 show() 注入 window:", error);
-    }
-    if (typeof _unsafeWindow !== "undefined") {
-      try {
-        _unsafeWindow.show = showHandler;
-      } catch (error) {
-        console.warn("无法将 show() 注入 unsafeWindow:", error);
-      }
-    }
-    document.addEventListener("tm-inline-editor-show", showHandler);
-    try {
-      const script = document.createElement("script");
-      script.textContent = `
-            (function () {
-                const trigger = function () {
-                    document.dispatchEvent(new CustomEvent('tm-inline-editor-show'));
-                };
-                window.show = trigger;
-                window.tmInlineEditor = Object.assign({}, window.tmInlineEditor || {}, { show: trigger });
-                console.log('✅ show() 函数已注入，执行 show() 可显示编辑按钮');
-            })();
-        `;
-      document.documentElement.appendChild(script);
-      script.remove();
-    } catch (error) {
-      console.warn("注入 show() 脚本失败:", error);
-    }
-  }
   function setupDynamicStyles(manager) {
     const rules = [];
     manager.fieldConfigs.forEach((config) => {
@@ -689,7 +799,7 @@
         if (typeof dataUrl !== "string") {
           throw new Error("无效图片数据");
         }
-        applyImageSource(manager.activeImageElement, dataUrl);
+        applyImageSource(manager.activeImageElement, dataUrl, "image-upload");
         manager.notification.show("图片已更新，点击“完成”保存。", "success");
       } catch (error) {
         console.error("读取图片失败:", error);
@@ -1040,6 +1150,11 @@
   }
   function syncEditableTargets(manager) {
     if (!manager.isEditing) return;
+    logDebug("observer-apply", {
+      writer: "EditSync",
+      reason: "sync editable targets",
+      data: manager.fieldConfigs.map((config) => config.keySuffix || config.name).slice(0, 12)
+    });
     collectTargetElements(manager).forEach(({ element, config }) => {
       makeEditable(manager, element, config);
     });
@@ -1049,6 +1164,11 @@
     manager.editMutationObserver = new MutationObserver((mutations) => {
       if (!manager.isEditing) return;
       if (!hasRelevantEditMutations(manager, mutations)) return;
+      logDebug("observer-hit", {
+        writer: "EditSync",
+        reason: "matched editable selectors",
+        summary: summarizeMutations(Array.from(mutations))
+      });
       scheduleEditableSync(manager, manager.editMutationDebounceMs);
     });
     manager.editMutationObserver.observe(document.body, {
@@ -1450,7 +1570,7 @@
     document.body.classList.remove("tm-editing-mode");
     manager.storage.savePersistent("hidden", true);
     manager.container.style.display = "none";
-    manager.notification.show("编辑按钮已隐藏，在控制台执行 show() 可重新显示。", "info");
+    manager.notification.show("编辑按钮已隐藏，在控制台执行 tmInlineEditor.show() 可重新显示。", "info");
   }
   function showButton(manager) {
     manager.setPanelOpen(false);
@@ -1533,7 +1653,6 @@
       this.applyRefundRowState(true);
       this.attachEvents();
       this.setupImageInput();
-      this.injectShowFunction();
       this.applyStoredDocumentTitle();
       if (this.toggleBtn) {
         this.initialEditLabel = this.toggleBtn.textContent?.trim() || this.initialEditLabel;
@@ -1543,7 +1662,7 @@
       }
       if (this.hidden) {
         this.container.style.display = "none";
-        console.log("🫥 编辑按钮已隐藏，可在控制台执行 show() 恢复");
+        console.log("🫥 编辑按钮已隐藏，可在控制台执行 tmInlineEditor.show() 恢复");
       }
     }
     createUI() {
@@ -1605,6 +1724,22 @@
     }
     showButton() {
       showButton(this);
+    }
+    show() {
+      this.showButton();
+    }
+    enableDebug() {
+      const updated = setDebugEnabled(true);
+      console.log(updated ? "🔎 调试日志已开启，刷新页面后可看到更完整的 tm-inline 日志。" : "⚠️ 当前环境无法开启调试日志。");
+      return updated;
+    }
+    disableDebug() {
+      const updated = setDebugEnabled(false);
+      console.log(updated ? "🔕 调试日志已关闭。" : "⚠️ 当前环境无法关闭调试日志。");
+      return updated;
+    }
+    isDebugEnabled() {
+      return isDebugEnabled();
     }
     handleReset() {
       handleReset(this);
@@ -1728,9 +1863,6 @@
     }
     handleAnchorClick(event) {
       handleAnchorClick(this, event);
-    }
-    injectShowFunction() {
-      injectShowFunction(this);
     }
     setupDynamicStyles() {
       setupDynamicStyles(this);
@@ -2218,6 +2350,10 @@
           this.stop();
           return;
         }
+        logDebug("observer-apply", {
+          writer: "TextObserver",
+          data: this.dataList.map((item) => item.keySuffix || item.selector).slice(0, 12)
+        });
         const elementCache = new Map();
         this.dataList.forEach((item) => {
           if (!item || item.value === void 0 || item.value === null) return;
@@ -2257,6 +2393,11 @@
       this.mutationObserver = new MutationObserver((mutations) => {
         if (!this.isActive) return;
         if (!this.hasRelevantMutations(mutations)) return;
+        logDebug("observer-hit", {
+          writer: "TextObserver",
+          reason: "matched active selectors",
+          summary: summarizeMutations(Array.from(mutations))
+        });
         this.scheduleApply(this.mutationDebounceMs);
       });
       this.mutationObserver.observe(document.body, {

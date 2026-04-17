@@ -1,3 +1,5 @@
+import { logDebug } from './debug.js';
+
 export function normalizeTextContent(value) {
     let text = String(value || '');
     try {
@@ -194,10 +196,23 @@ export function extractElementValue(element, config) {
 export function applyElementValue(element, value, config) {
     if (!element || value === undefined || value === null) return;
     const expected = typeof value === 'string' ? value : String(value);
+    const fieldName = config && (config.keySuffix || config.name);
 
     if (config && typeof config.setValue === 'function') {
         try {
+            const currentValue = extractElementValue(element, config);
             config.setValue(element, expected);
+            const nextValue = extractElementValue(element, config);
+            if (!isEqualValue(currentValue, nextValue)) {
+                logDebug('dom-write', {
+                    writer: 'custom-setValue',
+                    field: fieldName,
+                    element,
+                    current: currentValue,
+                    next: nextValue,
+                    trace: true
+                });
+            }
             return;
         } catch (error) {
             console.warn('自定义字段写值失败:', config.keySuffix || config.name || element, error);
@@ -206,15 +221,24 @@ export function applyElementValue(element, value, config) {
 
     if ((config && config.type === 'image') || element instanceof HTMLImageElement) {
         if (!(element instanceof HTMLImageElement)) return;
-        applyImageSource(element, expected);
+        applyImageSource(element, expected, fieldName);
         return;
     }
 
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
         if (element.value !== expected) {
+            const currentValue = element.value;
             element.value = expected;
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
+            logDebug('dom-write', {
+                writer: 'input-value',
+                field: fieldName,
+                element,
+                current: currentValue,
+                next: expected,
+                trace: true
+            });
         }
         return;
     }
@@ -226,9 +250,26 @@ export function applyElementValue(element, value, config) {
         const currentHtml = sanitizedClone ? sanitizedClone.innerHTML.trim() : element.innerHTML.trim();
         if (currentHtml !== sanitizedExpected) {
             element.innerHTML = sanitizedExpected;
+            logDebug('dom-write', {
+                writer: 'innerHTML',
+                field: fieldName,
+                element,
+                current: currentHtml,
+                next: sanitizedExpected,
+                trace: true
+            });
         }
     } else if ((element.textContent || '').trim() !== expected.trim()) {
+        const currentText = (element.textContent || '').trim();
         element.textContent = expected;
+        logDebug('dom-write', {
+            writer: 'textContent',
+            field: fieldName,
+            element,
+            current: currentText,
+            next: expected,
+            trace: true
+        });
     }
 }
 
@@ -421,13 +462,22 @@ export function applyImageDisplayConstraints(element) {
     }
 }
 
-export function applyImageSource(element, expected) {
+export function applyImageSource(element, expected, fieldName = 'image') {
     if (!(element instanceof HTMLImageElement)) return;
     const sameSource = element.src === expected;
     const alreadyApplied = element.dataset && element.dataset.tmInlineAppliedSrc === expected;
 
     if (!sameSource) {
+        const currentSource = element.src;
         element.src = expected;
+        logDebug('dom-write', {
+            writer: 'image-src',
+            field: fieldName,
+            element,
+            current: currentSource,
+            next: expected,
+            trace: true
+        });
     }
 
     if (!alreadyApplied) {

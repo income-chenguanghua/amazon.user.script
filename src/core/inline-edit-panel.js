@@ -1,4 +1,4 @@
-import { GM_addStyle, unsafeWindow } from '$';
+import { GM_addStyle } from '$';
 
 const TOOLBAR_ICONS = {
     pencil: `
@@ -165,44 +165,6 @@ export function handleOutsideClick(manager, event) {
         return;
     }
     setPanelOpen(manager, false);
-}
-
-export function injectShowFunction(manager) {
-    const showHandler = () => manager.showButton();
-
-    try {
-        window.show = showHandler;
-    } catch (error) {
-        console.warn('无法将 show() 注入 window:', error);
-    }
-
-    if (typeof unsafeWindow !== 'undefined') {
-        try {
-            unsafeWindow.show = showHandler;
-        } catch (error) {
-            console.warn('无法将 show() 注入 unsafeWindow:', error);
-        }
-    }
-
-    document.addEventListener('tm-inline-editor-show', showHandler);
-
-    try {
-        const script = document.createElement('script');
-        script.textContent = `
-            (function () {
-                const trigger = function () {
-                    document.dispatchEvent(new CustomEvent('tm-inline-editor-show'));
-                };
-                window.show = trigger;
-                window.tmInlineEditor = Object.assign({}, window.tmInlineEditor || {}, { show: trigger });
-                console.log('✅ show() 函数已注入，执行 show() 可显示编辑按钮');
-            })();
-        `;
-        document.documentElement.appendChild(script);
-        script.remove();
-    } catch (error) {
-        console.warn('注入 show() 脚本失败:', error);
-    }
 }
 
 export function setupDynamicStyles(manager) {

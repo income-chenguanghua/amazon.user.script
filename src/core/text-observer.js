@@ -4,6 +4,7 @@ import {
     getConfigSelectorList,
     getConfigWatchSelectorList
 } from './utils.js';
+import { logDebug, summarizeMutations } from './debug.js';
 import { hasRelevantMutationsForSelector, hasRelevantNodesForSelector, nodeTouchesSelectorText } from './dom-watch-utils.js';
 
 export class TextObserver {
@@ -175,6 +176,11 @@ export class TextObserver {
                 return;
             }
 
+            logDebug('observer-apply', {
+                writer: 'TextObserver',
+                data: this.dataList.map((item) => item.keySuffix || item.selector).slice(0, 12)
+            });
+
             const elementCache = new Map();
             this.dataList.forEach((item) => {
                 if (!item || item.value === undefined || item.value === null) return;
@@ -219,6 +225,11 @@ export class TextObserver {
         this.mutationObserver = new MutationObserver((mutations) => {
             if (!this.isActive) return;
             if (!this.hasRelevantMutations(mutations)) return;
+            logDebug('observer-hit', {
+                writer: 'TextObserver',
+                reason: 'matched active selectors',
+                summary: summarizeMutations(Array.from(mutations))
+            });
             this.scheduleApply(this.mutationDebounceMs);
         });
 

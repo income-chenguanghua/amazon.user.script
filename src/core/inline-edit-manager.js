@@ -1,5 +1,6 @@
 import { collectElementsFromConfig, getConfigSelectorList, getConfigWatchSelectorList } from './utils.js';
 import { buildStorageKey, buildStorageKeyFromSuffix } from './storage-key.js';
+import { isDebugEnabled, setDebugEnabled } from './debug.js';
 import {
     applyDocumentTitle,
     applyStoredDocumentTitle,
@@ -11,7 +12,6 @@ import {
     attachPanelEvents,
     createEditorUI,
     handleOutsideClick,
-    injectShowFunction,
     setPanelOpen,
     setupDynamicStyles,
     togglePanelOpen
@@ -79,7 +79,6 @@ export class InlineEditManager {
         this.applyRefundRowState(true);
         this.attachEvents();
         this.setupImageInput();
-        this.injectShowFunction();
         this.applyStoredDocumentTitle();
 
         if (this.toggleBtn) {
@@ -92,7 +91,7 @@ export class InlineEditManager {
 
         if (this.hidden) {
             this.container.style.display = 'none';
-            console.log('🫥 编辑按钮已隐藏，可在控制台执行 show() 恢复');
+            console.log('🫥 编辑按钮已隐藏，可在控制台执行 tmInlineEditor.show() 恢复');
         }
     }
 
@@ -174,6 +173,30 @@ export class InlineEditManager {
 
     showButton() {
         showButton(this);
+    }
+
+    show() {
+        this.showButton();
+    }
+
+    enableDebug() {
+        const updated = setDebugEnabled(true);
+        console.log(updated
+            ? '🔎 调试日志已开启，刷新页面后可看到更完整的 tm-inline 日志。'
+            : '⚠️ 当前环境无法开启调试日志。');
+        return updated;
+    }
+
+    disableDebug() {
+        const updated = setDebugEnabled(false);
+        console.log(updated
+            ? '🔕 调试日志已关闭。'
+            : '⚠️ 当前环境无法关闭调试日志。');
+        return updated;
+    }
+
+    isDebugEnabled() {
+        return isDebugEnabled();
     }
 
     handleReset() {
@@ -329,10 +352,6 @@ export class InlineEditManager {
 
     handleAnchorClick(event) {
         handleAnchorClick(this, event);
-    }
-
-    injectShowFunction() {
-        injectShowFunction(this);
     }
 
     setupDynamicStyles() {

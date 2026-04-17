@@ -88,7 +88,7 @@ https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.u
 - 点击 `修改标题`：弹窗输入新的网页标题
 - 点击 `隐藏退款行`：切换退款总计行显示状态
 - 点击 `重置`：清空当前页面已保存修改并刷新
-- 点击 `隐藏按钮`：隐藏工具按钮，之后可在控制台执行 `show()` 恢复
+- 点击 `隐藏按钮`：隐藏工具按钮，之后可在控制台执行 `tmInlineEditor.show()` 恢复
 
 编辑模式下：
 

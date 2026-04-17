@@ -22,7 +22,7 @@ export function setupImageInput(manager) {
             if (typeof dataUrl !== 'string') {
                 throw new Error('无效图片数据');
             }
-            applyImageSource(manager.activeImageElement, dataUrl);
+            applyImageSource(manager.activeImageElement, dataUrl, 'image-upload');
             manager.notification.show('图片已更新，点击“完成”保存。', 'success');
         } catch (error) {
             console.error('读取图片失败:', error);

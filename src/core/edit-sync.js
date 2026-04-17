@@ -4,6 +4,7 @@ import {
     getEditedElementWithChangedValue,
     pickPreferredValueElement
 } from './utils.js';
+import { logDebug, summarizeMutations } from './debug.js';
 import { hasRelevantMutationsForSelector, hasRelevantNodesForSelector, nodeTouchesSelectorText } from './dom-watch-utils.js';
 import { makeEditable } from './edit-image.js';
 
@@ -77,6 +78,11 @@ export function scheduleEditableSync(manager, delay = manager.editMutationDeboun
 
 export function syncEditableTargets(manager) {
     if (!manager.isEditing) return;
+    logDebug('observer-apply', {
+        writer: 'EditSync',
+        reason: 'sync editable targets',
+        data: manager.fieldConfigs.map((config) => config.keySuffix || config.name).slice(0, 12)
+    });
     collectTargetElements(manager).forEach(({ element, config }) => {
         makeEditable(manager, element, config);
     });
@@ -88,6 +94,11 @@ export function startEditMutationObserver(manager) {
     manager.editMutationObserver = new MutationObserver((mutations) => {
         if (!manager.isEditing) return;
         if (!hasRelevantEditMutations(manager, mutations)) return;
+        logDebug('observer-hit', {
+            writer: 'EditSync',
+            reason: 'matched editable selectors',
+            summary: summarizeMutations(Array.from(mutations))
+        });
         scheduleEditableSync(manager, manager.editMutationDebounceMs);
     });
 
