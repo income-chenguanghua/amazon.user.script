@@ -10,6 +10,40 @@ import { injectEditorStyles } from './styles/editor-styles.js';
 const amazonRetailHostPattern = /(^|\.)amazon\.(?:com|[a-z]{2,3}|com\.[a-z]{2}|co\.[a-z]{2})$/i;
 const currentHostname = window.location && window.location.hostname ? window.location.hostname : '';
 
+function exposeInlineEditor(inlineEditManager) {
+    if (typeof inlineEditManager.show === 'function') {
+        inlineEditManager.show = inlineEditManager.show.bind(inlineEditManager);
+    }
+
+    const targetWindows = [window];
+    if (typeof unsafeWindow !== 'undefined' && unsafeWindow && unsafeWindow !== window) {
+        targetWindows.push(unsafeWindow);
+    }
+
+    let exposed = false;
+    for (const targetWindow of targetWindows) {
+        try {
+            Object.defineProperty(targetWindow, 'tmInlineEditor', {
+                value: inlineEditManager,
+                configurable: true,
+                writable: true
+            });
+            exposed = true;
+        } catch (error) {
+            try {
+                targetWindow.tmInlineEditor = inlineEditManager;
+                exposed = true;
+            } catch (assignmentError) {
+                console.warn('无法注入 tmInlineEditor 实例:', assignmentError);
+            }
+        }
+    }
+
+    if (exposed) {
+        console.log('✅ tmInlineEditor 已注入 window，可执行 tmInlineEditor.show() 显示按钮');
+    }
+}
+
 if (!amazonRetailHostPattern.test(currentHostname)) {
     console.warn('Amazon 页面元素内联编辑助手（含顶部广告移除）: 非亚马逊页面，未启动。');
 } else {
@@ -28,15 +62,7 @@ if (!amazonRetailHostPattern.test(currentHostname)) {
 
         const textObserver = new TextObserver([]);
         const inlineEditManager = new InlineEditManager(storage, notification, textObserver, fieldConfigs, valueMap);
-
-        try {
-            window.tmInlineEditor = inlineEditManager;
-            if (typeof unsafeWindow !== 'undefined') {
-                unsafeWindow.tmInlineEditor = inlineEditManager;
-            }
-        } catch (error) {
-            console.warn('无法注入 tmInlineEditor 实例:', error);
-        }
+        exposeInlineEditor(inlineEditManager);
 
         setTimeout(() => {
             textObserver.start();
