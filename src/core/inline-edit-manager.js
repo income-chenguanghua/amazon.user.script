@@ -91,7 +91,7 @@ export class InlineEditManager {
 
         if (this.hidden) {
             this.container.style.display = 'none';
-            console.log('🫥 编辑按钮已隐藏，可在控制台执行 tmInlineEditor.show() 恢复');
+            console.log('🫥 编辑按钮已隐藏，可在控制台执行 show() 恢复');
         }
     }
 

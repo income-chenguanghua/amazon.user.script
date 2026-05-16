@@ -14,6 +14,7 @@ function exposeInlineEditor(inlineEditManager) {
     if (typeof inlineEditManager.show === 'function') {
         inlineEditManager.show = inlineEditManager.show.bind(inlineEditManager);
     }
+    const showInlineEditor = () => inlineEditManager.show();
 
     const targetWindows = [window];
     if (typeof unsafeWindow !== 'undefined' && unsafeWindow && unsafeWindow !== window) {
@@ -28,19 +29,25 @@ function exposeInlineEditor(inlineEditManager) {
                 configurable: true,
                 writable: true
             });
+            Object.defineProperty(targetWindow, 'show', {
+                value: showInlineEditor,
+                configurable: true,
+                writable: true
+            });
             exposed = true;
         } catch (error) {
             try {
                 targetWindow.tmInlineEditor = inlineEditManager;
+                targetWindow.show = showInlineEditor;
                 exposed = true;
             } catch (assignmentError) {
-                console.warn('无法注入 tmInlineEditor 实例:', assignmentError);
+                console.warn('无法注入 show 方法:', assignmentError);
             }
         }
     }
 
     if (exposed) {
-        console.log('✅ tmInlineEditor 已注入 window，可执行 tmInlineEditor.show() 显示按钮');
+        console.log('✅ show() 已注入 window，可直接执行 show() 显示按钮');
     }
 }
 

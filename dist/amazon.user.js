@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.417.1729
+// @version      26.516.2110
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
@@ -1570,7 +1570,7 @@
     document.body.classList.remove("tm-editing-mode");
     manager.storage.savePersistent("hidden", true);
     manager.container.style.display = "none";
-    manager.notification.show("编辑按钮已隐藏，在控制台执行 tmInlineEditor.show() 可重新显示。", "info");
+    manager.notification.show("编辑按钮已隐藏，在控制台执行 show() 可重新显示。", "info");
   }
   function showButton(manager) {
     manager.setPanelOpen(false);
@@ -1662,7 +1662,7 @@
       }
       if (this.hidden) {
         this.container.style.display = "none";
-        console.log("🫥 编辑按钮已隐藏，可在控制台执行 tmInlineEditor.show() 恢复");
+        console.log("🫥 编辑按钮已隐藏，可在控制台执行 show() 恢复");
       }
     }
     createUI() {
@@ -2823,6 +2823,7 @@
     if (typeof inlineEditManager.show === "function") {
       inlineEditManager.show = inlineEditManager.show.bind(inlineEditManager);
     }
+    const showInlineEditor = () => inlineEditManager.show();
     const targetWindows = [window];
     if (typeof _unsafeWindow !== "undefined" && _unsafeWindow && _unsafeWindow !== window) {
       targetWindows.push(_unsafeWindow);
@@ -2835,18 +2836,24 @@
           configurable: true,
           writable: true
         });
+        Object.defineProperty(targetWindow, "show", {
+          value: showInlineEditor,
+          configurable: true,
+          writable: true
+        });
         exposed = true;
       } catch (error) {
         try {
           targetWindow.tmInlineEditor = inlineEditManager;
+          targetWindow.show = showInlineEditor;
           exposed = true;
         } catch (assignmentError) {
-          console.warn("无法注入 tmInlineEditor 实例:", assignmentError);
+          console.warn("无法注入 show 方法:", assignmentError);
         }
       }
     }
     if (exposed) {
-      console.log("✅ tmInlineEditor 已注入 window，可执行 tmInlineEditor.show() 显示按钮");
+      console.log("✅ show() 已注入 window，可直接执行 show() 显示按钮");
     }
   }
   if (!amazonRetailHostPattern.test(currentHostname)) {
