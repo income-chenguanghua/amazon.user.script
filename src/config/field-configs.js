@@ -183,6 +183,11 @@ export const defaultFieldConfigs = [
         resolveElements: () => resolveOfferDisplayBrandElements()
     },
     {
+        name: '商家信任信息卡片',
+        keySuffix: 'merchant_trust_info_card',
+        selector: '#merchant-trust-info-card'
+    },
+    {
         name: '品牌 (商品概览)',
         keySuffix: 'brand_product_overview',
         watchSelectors: ['#productOverview_feature_div', '#poExpander', '#topHighlight', '#voyagerNorthstarATF'],
