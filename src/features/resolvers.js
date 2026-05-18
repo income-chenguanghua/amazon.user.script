@@ -17,7 +17,15 @@ const CHARGE_SUMMARY_LABEL_ALIASES = {
 const PRODUCT_OVERVIEW_BRAND_SELECTORS = [
     '#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
     '#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
-    '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span'
+    '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
+    '#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span'
+];
+
+const PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS = [
+    '#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
+    '#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
+    '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
+    '#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span'
 ];
 
 const LEGACY_PAYMENT_CARD_ENDING_SELECTORS = [
@@ -226,6 +234,10 @@ export function resolveOfferDisplayBrandElements() {
 
 export function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
+}
+
+export function resolveProductOverviewManufacturerElements() {
+    return collectElementsFromSelectors(PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS);
 }
 
 function getModernPaymentCardNumberElement(element) {

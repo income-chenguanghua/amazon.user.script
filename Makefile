@@ -7,11 +7,9 @@ NPM_BIN := $(shell command -v npm 2>/dev/null)
 PKG_BIN := $(if $(strip $(PNPM_BIN)),$(PNPM_BIN),$(NPM_BIN))
 PKG_NAME := $(if $(strip $(PNPM_BIN)),pnpm,npm)
 GIT_BIN := $(shell command -v git 2>/dev/null)
-CURL_BIN := $(shell command -v curl 2>/dev/null)
 REPO_SLUG := income-chenguanghua/amazon.user.script
-CDN_BASE := https://cdn.jsdelivr.net/gh/$(REPO_SLUG)
-PURGE_BASE := https://purge.jsdelivr.net/gh/$(REPO_SLUG)
-CDN_FILES := dist/amazon.meta.js dist/amazon.user.js
+RAW_BASE := https://raw.githubusercontent.com/$(REPO_SLUG)/main
+INSTALL_FILES := dist/amazon.meta.js dist/amazon.user.js
 
 ifeq ($(origin VERSION), undefined)
 ifneq ($(strip $(NODE_BIN)),)
@@ -29,7 +27,7 @@ endif
 COMMIT_MSG ?= bump version $(VERSION)
 
 
-.PHONY: help ensure-node ensure-git ensure-curl print-version update-version dev deploy print-cdn purge-cdn
+.PHONY: help ensure-node ensure-git print-version update-version dev deploy print-install
 
 help:
 	@echo "Available targets:"
@@ -41,9 +39,8 @@ help:
 	@echo "  make print-version  Print the computed release version"
 	@echo "  make update-version Update package.json version"
 	@echo "  make dev            Start the Vite dev server with $(PKG_NAME)"
-	@echo "  make deploy         Version, build, typecheck, commit, push, then purge jsDelivr"
-	@echo "  make print-cdn      Print jsDelivr install and purge URLs"
-	@echo "  make purge-cdn      Purge jsDelivr cache for dist artifacts after git push"
+	@echo "  make deploy         Version, build, typecheck, commit, then push"
+	@echo "  make print-install  Print raw GitHub install/update URLs"
 
 ensure-node:
 	@if [ -z "$(NODE_BIN)" ]; then \
@@ -58,12 +55,6 @@ ensure-node:
 ensure-git:
 	@if [ -z "$(GIT_BIN)" ]; then \
 		echo "git is not installed. Please install git first."; \
-		exit 1; \
-	fi
-
-ensure-curl:
-	@if [ -z "$(CURL_BIN)" ]; then \
-		echo "curl is not installed. Please install curl first."; \
 		exit 1; \
 	fi
 
@@ -84,7 +75,7 @@ fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');\
 dev: ensure-node
 	@"$(PKG_BIN)" run dev
 
-deploy: update-version ensure-git ensure-curl
+deploy: update-version ensure-git
 	@"$(PKG_BIN)" run build
 	@"$(PKG_BIN)" run typecheck
 	@"$(GIT_BIN)" add -A
@@ -94,27 +85,10 @@ deploy: update-version ensure-git ensure-curl
 		"$(GIT_BIN)" commit -m "$(COMMIT_MSG)"; \
 	fi
 	@"$(GIT_BIN)" push
-	@$(MAKE) purge-cdn
 	@echo "Deploy completed."
 
-print-cdn:
-	@echo "CDN URLs:"
-	@for file in $(CDN_FILES); do \
-		echo "  $(CDN_BASE)/$$file"; \
+print-install:
+	@echo "Raw GitHub URLs:"
+	@for file in $(INSTALL_FILES); do \
+		echo "  $(RAW_BASE)/$$file"; \
 	done
-	@echo "Purge URLs:"
-	@for file in $(CDN_FILES); do \
-		echo "  $(PURGE_BASE)/$$file"; \
-	done
-
-purge-cdn: ensure-curl
-	@echo "Purging jsDelivr cache for current alias URLs..."
-	@for file in $(CDN_FILES); do \
-		url="$(PURGE_BASE)/$$file"; \
-		echo ""; \
-		echo "==> $$url"; \
-		"$(CURL_BIN)" --fail --silent --show-error "$$url"; \
-		echo ""; \
-	done
-	@echo ""
-	@echo "Purge requests finished. If the remote commit was pushed very recently, wait a moment and retry if needed."

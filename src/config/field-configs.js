@@ -7,6 +7,7 @@ import {
     resolveOfferDisplayBrandElements,
     resolvePaymentCardEndingElements,
     resolveProductOverviewBrandElements,
+    resolveProductOverviewManufacturerElements,
     setChargeSummaryValue,
     setPaymentCardEndingValue
 } from '../features/resolvers.js';
@@ -186,6 +187,12 @@ export const defaultFieldConfigs = [
         keySuffix: 'brand_product_overview',
         watchSelectors: ['#productOverview_feature_div', '#poExpander', '#topHighlight', '#voyagerNorthstarATF'],
         resolveElements: () => resolveProductOverviewBrandElements()
+    },
+    {
+        name: '制造商 (商品概览)',
+        keySuffix: 'manufacturer_product_overview',
+        watchSelectors: ['#productOverview_feature_div', '#poExpander', '#topHighlight', '#voyagerNorthstarATF'],
+        resolveElements: () => resolveProductOverviewManufacturerElements()
     },
     {
         name: '品牌信息',

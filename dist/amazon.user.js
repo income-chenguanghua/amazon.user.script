@@ -4,8 +4,8 @@
 // @version      26.516.2110
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
-// @downloadURL  https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.user.js
-// @updateURL    https://cdn.jsdelivr.net/gh/income-chenguanghua/amazon.user.script/dist/amazon.meta.js
+// @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js
+// @updateURL    https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.meta.js
 // @include      *://amazon.*/*
 // @include      *://*.amazon.*/*
 // @grant        GM_addStyle
@@ -1223,7 +1223,14 @@
   const PRODUCT_OVERVIEW_BRAND_SELECTORS = [
     "#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span",
     "#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span",
-    "#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span"
+    "#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span",
+    "#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span"
+  ];
+  const PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS = [
+    "#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span",
+    "#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span",
+    "#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span",
+    "#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span"
   ];
   const LEGACY_PAYMENT_CARD_ENDING_SELECTORS = [
     ".pmts-payments-instrument-detail-box-paystationpaymentmethod .a-color-base"
@@ -1392,6 +1399,9 @@
   }
   function resolveProductOverviewBrandElements() {
     return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
+  }
+  function resolveProductOverviewManufacturerElements() {
+    return collectElementsFromSelectors(PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS);
   }
   function getModernPaymentCardNumberElement(element) {
     if (!(element instanceof HTMLElement)) return null;
@@ -2062,6 +2072,12 @@
       keySuffix: "brand_product_overview",
       watchSelectors: ["#productOverview_feature_div", "#poExpander", "#topHighlight", "#voyagerNorthstarATF"],
       resolveElements: () => resolveProductOverviewBrandElements()
+    },
+    {
+      name: "制造商 (商品概览)",
+      keySuffix: "manufacturer_product_overview",
+      watchSelectors: ["#productOverview_feature_div", "#poExpander", "#topHighlight", "#voyagerNorthstarATF"],
+      resolveElements: () => resolveProductOverviewManufacturerElements()
     },
     {
       name: "品牌信息",
