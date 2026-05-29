@@ -199,6 +199,9 @@ export function makeEditable(manager, element, config) {
         }
 
         element.dataset.tmInlineDialogEdit = '1';
+        if (config && config.allowNativeClick) {
+            element.dataset.tmInlineAllowNativeClick = '1';
+        }
     } else if (isInput) {
         element.disabled = false;
         element.readOnly = false;
@@ -219,8 +222,10 @@ export function restoreElements(manager) {
     manager.editedElements.forEach((state, element) => {
         if (!element) return;
         delete element.dataset.tmInlineEditing;
+        delete element.dataset.tmInlineAllowNativeClick;
         element.removeAttribute('data-tm-inline-editing');
         element.removeAttribute('data-tm-inline-dialog-edit');
+        element.removeAttribute('data-tm-inline-allow-native-click');
         element.classList.remove('tm-inline-editing');
 
         if (state.isInput) {
@@ -291,6 +296,7 @@ export function cleanupLooseEditingMarks(root = document) {
             node.classList.remove('tm-inline-editing');
             node.removeAttribute('data-tm-inline-editing');
             node.removeAttribute('data-tm-inline-dialog-edit');
+            node.removeAttribute('data-tm-inline-allow-native-click');
             if (node.isContentEditable) {
                 node.removeAttribute('contenteditable');
                 node.contentEditable = 'inherit';

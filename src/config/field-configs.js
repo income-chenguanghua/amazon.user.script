@@ -185,7 +185,10 @@ export const defaultFieldConfigs = [
     {
         name: '商家信任信息卡片',
         keySuffix: 'merchant_trust_info_card',
-        selector: '#merchant-trust-info-card'
+        selector: '#merchant-trust-info-card',
+        editMode: 'dialog',
+        dialogButtonLabel: '换字',
+        allowNativeClick: true
     },
     {
         name: '品牌 (商品概览)',

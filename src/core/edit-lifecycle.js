@@ -84,7 +84,7 @@ export function enterEditMode(manager) {
     if (elements.length === 0) {
         manager.notification.show('未找到可编辑的元素，请检查选择器配置。', 'warning');
     } else {
-        manager.notification.show('编辑模式已开启：可直接改文字；评论数点旁边“改”按钮编辑；点击图片角标“换”可替换，左键预览保留。', 'info');
+        manager.notification.show('编辑模式已开启：可直接改文字；部分字段点旁边按钮编辑；点击图片角标“换”可替换，左键预览保留。', 'info');
     }
 }
 
@@ -194,7 +194,9 @@ export function handleAnchorClick(manager, event) {
     if (!anchor) return;
     const containsDialogEditTarget = anchor.matches('[data-tm-inline-dialog-edit="1"]') ||
         Boolean(anchor.querySelector('[data-tm-inline-dialog-edit="1"]'));
-    if (containsDialogEditTarget) {
+    const allowsDialogNativeClick = anchor.matches('[data-tm-inline-allow-native-click="1"]') ||
+        Boolean(anchor.querySelector('[data-tm-inline-allow-native-click="1"]'));
+    if (containsDialogEditTarget && !allowsDialogNativeClick) {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();

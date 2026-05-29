@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.518.1320
+// @version      26.529.2210
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js

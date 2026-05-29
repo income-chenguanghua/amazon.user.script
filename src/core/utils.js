@@ -136,6 +136,7 @@ function cleanupInlineEditingArtifacts(node) {
     node.classList.remove('tm-inline-editing');
     node.removeAttribute('data-tm-inline-editing');
     node.removeAttribute('data-tm-inline-dialog-edit');
+    node.removeAttribute('data-tm-inline-allow-native-click');
     node.removeAttribute('contenteditable');
 }
 

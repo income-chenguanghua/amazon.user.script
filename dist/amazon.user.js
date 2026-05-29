@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.518.1320
+// @version      26.529.2210
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js
@@ -220,6 +220,7 @@
     node.classList.remove("tm-inline-editing");
     node.removeAttribute("data-tm-inline-editing");
     node.removeAttribute("data-tm-inline-dialog-edit");
+    node.removeAttribute("data-tm-inline-allow-native-click");
     node.removeAttribute("contenteditable");
   }
   function getSanitizedElementClone(element) {
@@ -952,6 +953,9 @@
         state.dialogTriggerClickHandler = openTextDialog;
       }
       element.dataset.tmInlineDialogEdit = "1";
+      if (config && config.allowNativeClick) {
+        element.dataset.tmInlineAllowNativeClick = "1";
+      }
     } else if (isInput) {
       element.disabled = false;
       element.readOnly = false;
@@ -970,8 +974,10 @@
     manager.editedElements.forEach((state, element) => {
       if (!element) return;
       delete element.dataset.tmInlineEditing;
+      delete element.dataset.tmInlineAllowNativeClick;
       element.removeAttribute("data-tm-inline-editing");
       element.removeAttribute("data-tm-inline-dialog-edit");
+      element.removeAttribute("data-tm-inline-allow-native-click");
       element.classList.remove("tm-inline-editing");
       if (state.isInput) {
         element.disabled = state.disabled;
@@ -1037,6 +1043,7 @@
         node.classList.remove("tm-inline-editing");
         node.removeAttribute("data-tm-inline-editing");
         node.removeAttribute("data-tm-inline-dialog-edit");
+        node.removeAttribute("data-tm-inline-allow-native-click");
         if (node.isContentEditable) {
           node.removeAttribute("contenteditable");
           node.contentEditable = "inherit";
@@ -1516,7 +1523,7 @@
     if (elements.length === 0) {
       manager.notification.show("未找到可编辑的元素，请检查选择器配置。", "warning");
     } else {
-      manager.notification.show("编辑模式已开启：可直接改文字；评论数点旁边“改”按钮编辑；点击图片角标“换”可替换，左键预览保留。", "info");
+      manager.notification.show("编辑模式已开启：可直接改文字；部分字段点旁边按钮编辑；点击图片角标“换”可替换，左键预览保留。", "info");
     }
   }
   function exitEditMode(manager, saveChanges = true) {
@@ -1616,7 +1623,8 @@
     const anchor = event.target && event.target.closest("a");
     if (!anchor) return;
     const containsDialogEditTarget = anchor.matches('[data-tm-inline-dialog-edit="1"]') || Boolean(anchor.querySelector('[data-tm-inline-dialog-edit="1"]'));
-    if (containsDialogEditTarget) {
+    const allowsDialogNativeClick = anchor.matches('[data-tm-inline-allow-native-click="1"]') || Boolean(anchor.querySelector('[data-tm-inline-allow-native-click="1"]'));
+    if (containsDialogEditTarget && !allowsDialogNativeClick) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -2070,7 +2078,10 @@
     {
       name: "商家信任信息卡片",
       keySuffix: "merchant_trust_info_card",
-      selector: "#merchant-trust-info-card"
+      selector: "#merchant-trust-info-card",
+      editMode: "dialog",
+      dialogButtonLabel: "换字",
+      allowNativeClick: true
     },
     {
       name: "品牌 (商品概览)",
