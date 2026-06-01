@@ -40,6 +40,18 @@ export function injectEditorStyles() {
             flex-wrap: wrap;
             justify-content: flex-end;
         }
+        .tm-inline-version {
+            align-self: center;
+            color: #6e7781;
+            font-size: 10px;
+            line-height: 1;
+            font-weight: 500;
+            letter-spacing: 0;
+            opacity: 0.62;
+            user-select: none;
+            pointer-events: none;
+            white-space: nowrap;
+        }
         #tm-inline-notifications {
             position: fixed;
             top: 16px;
@@ -295,6 +307,11 @@ export function injectEditorStyles() {
             .tm-inline-toolbar-group-main {
                 padding-right: 0;
                 border-right: none;
+            }
+            .tm-inline-version {
+                justify-self: end;
+                font-size: 9px;
+                opacity: 0.54;
             }
             #tm-inline-editor .tm-inline-btn {
                 height: 26px;

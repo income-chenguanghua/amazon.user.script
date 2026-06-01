@@ -1,4 +1,7 @@
 import { GM_addStyle } from '$';
+import packageJson from '../../package.json';
+
+const APP_VERSION = packageJson.version || '';
 
 const TOOLBAR_ICONS = {
     pencil: `
@@ -113,6 +116,7 @@ export function createEditorUI(manager) {
                     icon: 'x'
                 })}
             </div>
+            <span class="tm-inline-version" title="脚本版本" aria-label="脚本版本 ${APP_VERSION}">v${APP_VERSION}</span>
         </div>
     `;
     document.body.appendChild(manager.container);

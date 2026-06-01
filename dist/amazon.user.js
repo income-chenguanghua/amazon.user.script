@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.61.1217
+// @version      26.61.1223
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js
@@ -612,6 +612,11 @@
     }
     manager.notification.show("标题恢复失败，请查看控制台。", "error");
   }
+  const version = "26.61.1223";
+  const packageJson = {
+    version
+  };
+  const APP_VERSION = packageJson.version;
   const TOOLBAR_ICONS = {
     pencil: `
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
@@ -720,6 +725,7 @@
     icon: "x"
   })}
             </div>
+            <span class="tm-inline-version" title="脚本版本" aria-label="脚本版本 ${APP_VERSION}">v${APP_VERSION}</span>
         </div>
     `;
     document.body.appendChild(manager.container);
@@ -2612,6 +2618,18 @@
             flex-wrap: wrap;
             justify-content: flex-end;
         }
+        .tm-inline-version {
+            align-self: center;
+            color: #6e7781;
+            font-size: 10px;
+            line-height: 1;
+            font-weight: 500;
+            letter-spacing: 0;
+            opacity: 0.62;
+            user-select: none;
+            pointer-events: none;
+            white-space: nowrap;
+        }
         #tm-inline-notifications {
             position: fixed;
             top: 16px;
@@ -2867,6 +2885,11 @@
             .tm-inline-toolbar-group-main {
                 padding-right: 0;
                 border-right: none;
+            }
+            .tm-inline-version {
+                justify-self: end;
+                font-size: 9px;
+                opacity: 0.54;
             }
             #tm-inline-editor .tm-inline-btn {
                 height: 26px;
