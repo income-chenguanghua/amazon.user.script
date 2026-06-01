@@ -14,19 +14,29 @@ const CHARGE_SUMMARY_LABEL_ALIASES = {
     charge_refund_total: ['refund total', 'refund', '退款', '返金', '払い戻し', 'reembolso', 'rimborso', 'remboursement', 'erstattung', 'rückerstattung', 'zwrot', 'iade', 'استرداد']
 };
 
+const PRODUCT_OVERVIEW_CONTAINER_SELECTORS = [
+    '#productOverview_feature_div',
+    '#poExpander',
+    '#topHighlight',
+    '#voyagerNorthstarATF'
+];
+
 const PRODUCT_OVERVIEW_BRAND_SELECTORS = [
-    '#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
-    '#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
-    '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span',
-    '#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-brand > td.a-span9 > span'
+    '#productOverview_feature_div tr.po-brand td.a-span9 > span',
+    '#poExpander tr.po-brand td.a-span9 > span',
+    '#topHighlight tr.po-brand td.a-span9 > span',
+    '#voyagerNorthstarATF tr.po-brand td.a-span9 > span'
 ];
 
 const PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS = [
-    '#productOverview_feature_div > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
-    '#poExpander > div.a-expander-content.a-expander-partial-collapse-content > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
-    '#topHighlight > div.a-section.a-spacing-small.a-spacing-top-small > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span',
-    '#topHighlight > div:nth-child(1) > div > table > tbody > tr.a-spacing-small.po-manufacturer > td.a-span9 > span'
+    '#productOverview_feature_div tr.po-manufacturer td.a-span9 > span',
+    '#poExpander tr.po-manufacturer td.a-span9 > span',
+    '#topHighlight tr.po-manufacturer td.a-span9 > span',
+    '#voyagerNorthstarATF tr.po-manufacturer td.a-span9 > span'
 ];
+
+const PRODUCT_OVERVIEW_BRAND_LABEL_ALIASES = ['brand', 'brand name', '品牌'];
+const PRODUCT_OVERVIEW_MANUFACTURER_LABEL_ALIASES = ['manufacturer', '制造商', '製造元'];
 
 const LEGACY_PAYMENT_CARD_ENDING_SELECTORS = [
     '.pmts-payments-instrument-detail-box-paystationpaymentmethod .a-color-base'
@@ -197,6 +207,70 @@ function getBusinessAddressLabelRow() {
     return null;
 }
 
+function getProductOverviewRows() {
+    const rows = [];
+    const seen = new Set();
+
+    collectElementsFromSelectors(PRODUCT_OVERVIEW_CONTAINER_SELECTORS).forEach((container) => {
+        container.querySelectorAll('tr').forEach((row) => {
+            if (!(row instanceof HTMLElement) || seen.has(row)) return;
+            seen.add(row);
+            rows.push(row);
+        });
+    });
+
+    return rows;
+}
+
+function getProductOverviewRowLabel(row) {
+    if (!(row instanceof HTMLElement)) return '';
+
+    const labelElement = row.querySelector(':scope > td.a-span3, :scope > th, :scope > td:first-child');
+    return labelElement instanceof HTMLElement
+        ? normalizeTextContent(labelElement.textContent)
+        : '';
+}
+
+function productOverviewRowMatches(row, className, labelAliases) {
+    if (!(row instanceof HTMLElement)) return false;
+    if (row.classList.contains(className)) return true;
+
+    const labelText = getProductOverviewRowLabel(row);
+    if (!labelText) return false;
+
+    return labelAliases.some((alias) => {
+        const normalizedAlias = normalizeTextContent(alias);
+        return normalizedAlias && (labelText === normalizedAlias || labelText.includes(normalizedAlias));
+    });
+}
+
+function getProductOverviewRowValueElement(row) {
+    if (!(row instanceof HTMLElement)) return null;
+
+    const valueCell = row.querySelector(':scope > td.a-span9, :scope > td:nth-child(2)');
+    if (!(valueCell instanceof HTMLElement)) return null;
+
+    const valueCandidates = Array.from(valueCell.querySelectorAll(':scope > span, :scope > a, span, a'))
+        .filter((element) => element instanceof HTMLElement);
+    return pickPreferredValueElement(valueCandidates) || valueCell;
+}
+
+function resolveProductOverviewRowElements(selectors, rowClassName, labelAliases) {
+    const results = collectElementsFromSelectors(selectors);
+    const seen = new Set(results);
+
+    getProductOverviewRows().forEach((row) => {
+        if (!productOverviewRowMatches(row, rowClassName, labelAliases)) return;
+
+        const valueElement = getProductOverviewRowValueElement(row);
+        if (!valueElement || seen.has(valueElement)) return;
+        seen.add(valueElement);
+        results.push(valueElement);
+    });
+
+    return normalizeResolvedElements(results);
+}
+
 export function resolveBusinessNameElements(part = 'value') {
     const row = getBusinessNameRow();
     if (!(row instanceof HTMLElement)) return [];
@@ -233,11 +307,19 @@ export function resolveOfferDisplayBrandElements() {
 }
 
 export function resolveProductOverviewBrandElements() {
-    return collectElementsFromSelectors(PRODUCT_OVERVIEW_BRAND_SELECTORS);
+    return resolveProductOverviewRowElements(
+        PRODUCT_OVERVIEW_BRAND_SELECTORS,
+        'po-brand',
+        PRODUCT_OVERVIEW_BRAND_LABEL_ALIASES
+    );
 }
 
 export function resolveProductOverviewManufacturerElements() {
-    return collectElementsFromSelectors(PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS);
+    return resolveProductOverviewRowElements(
+        PRODUCT_OVERVIEW_MANUFACTURER_SELECTORS,
+        'po-manufacturer',
+        PRODUCT_OVERVIEW_MANUFACTURER_LABEL_ALIASES
+    );
 }
 
 function getModernPaymentCardNumberElement(element) {
