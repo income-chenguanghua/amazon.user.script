@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.61.1223
+// @version      26.61.1226
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js
@@ -612,7 +612,7 @@
     }
     manager.notification.show("标题恢复失败，请查看控制台。", "error");
   }
-  const version = "26.61.1223";
+  const version = "26.61.1226";
   const packageJson = {
     version
   };
@@ -684,8 +684,9 @@
     manager.container.id = "tm-inline-editor";
     manager.container.innerHTML = `
         <div id="tm-inline-toolbar-panel" class="tm-inline-toolbar-panel">
-            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
-                ${renderToolbarButton({
+            <div class="tm-inline-toolbar-controls">
+                <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
+                    ${renderToolbarButton({
     id: "tm-edit-toggle",
     className: "tm-inline-btn-primary",
     title: "进入编辑模式",
@@ -693,16 +694,16 @@
     icon: "pencil",
     activeIcon: "check"
   })}
-            </div>
-            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
-                ${renderToolbarButton({
+                </div>
+                <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
+                    ${renderToolbarButton({
     id: "tm-edit-title",
     className: "tm-inline-btn-ghost",
     title: "弹窗修改网站标题",
     label: "标题",
     icon: "heading"
   })}
-                ${renderToolbarButton({
+                    ${renderToolbarButton({
     id: "tm-edit-toggle-refund",
     className: "tm-inline-btn-ghost",
     title: "显示或隐藏退款总计行",
@@ -710,20 +711,21 @@
     icon: "eye",
     activeIcon: "eyeClosed"
   })}
-                ${renderToolbarButton({
+                    ${renderToolbarButton({
     id: "tm-edit-reset",
     className: "tm-inline-btn-warning",
     title: "删除所有保存的值并刷新页面",
     label: "重置",
     icon: "trash"
   })}
-                ${renderToolbarButton({
+                    ${renderToolbarButton({
     id: "tm-edit-hide",
     className: "tm-inline-btn-ghost",
     title: "隐藏编辑按钮",
     label: "隐藏",
     icon: "x"
   })}
+                </div>
             </div>
             <span class="tm-inline-version" title="脚本版本" aria-label="脚本版本 ${APP_VERSION}">v${APP_VERSION}</span>
         </div>
@@ -2592,9 +2594,9 @@
         }
         .tm-inline-toolbar-panel {
             display: grid;
-            grid-auto-flow: column;
-            align-items: center;
-            gap: 8px;
+            align-items: end;
+            justify-items: end;
+            gap: 3px;
             padding: 8px;
             border-radius: 10px;
             background: rgba(246, 248, 250, 0.96);
@@ -2603,6 +2605,13 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             max-width: min(520px, calc(100vw - 16px));
+        }
+        .tm-inline-toolbar-controls {
+            display: grid;
+            grid-auto-flow: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
         }
         .tm-inline-toolbar-group {
             display: flex;
@@ -2619,7 +2628,7 @@
             justify-content: flex-end;
         }
         .tm-inline-version {
-            align-self: center;
+            justify-self: end;
             color: #6e7781;
             font-size: 10px;
             line-height: 1;
@@ -2876,11 +2885,15 @@
                 max-width: calc(100vw - 24px);
             }
             .tm-inline-toolbar-panel {
-                grid-auto-flow: row;
                 justify-items: end;
                 max-width: min(340px, calc(100vw - 24px));
                 gap: 6px;
                 padding: 7px;
+            }
+            .tm-inline-toolbar-controls {
+                grid-auto-flow: row;
+                justify-items: end;
+                gap: 6px;
             }
             .tm-inline-toolbar-group-main {
                 padding-right: 0;

@@ -14,9 +14,9 @@ export function injectEditorStyles() {
         }
         .tm-inline-toolbar-panel {
             display: grid;
-            grid-auto-flow: column;
-            align-items: center;
-            gap: 8px;
+            align-items: end;
+            justify-items: end;
+            gap: 3px;
             padding: 8px;
             border-radius: 10px;
             background: rgba(246, 248, 250, 0.96);
@@ -25,6 +25,13 @@ export function injectEditorStyles() {
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             max-width: min(520px, calc(100vw - 16px));
+        }
+        .tm-inline-toolbar-controls {
+            display: grid;
+            grid-auto-flow: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
         }
         .tm-inline-toolbar-group {
             display: flex;
@@ -41,7 +48,7 @@ export function injectEditorStyles() {
             justify-content: flex-end;
         }
         .tm-inline-version {
-            align-self: center;
+            justify-self: end;
             color: #6e7781;
             font-size: 10px;
             line-height: 1;
@@ -298,11 +305,15 @@ export function injectEditorStyles() {
                 max-width: calc(100vw - 24px);
             }
             .tm-inline-toolbar-panel {
-                grid-auto-flow: row;
                 justify-items: end;
                 max-width: min(340px, calc(100vw - 24px));
                 gap: 6px;
                 padding: 7px;
+            }
+            .tm-inline-toolbar-controls {
+                grid-auto-flow: row;
+                justify-items: end;
+                gap: 6px;
             }
             .tm-inline-toolbar-group-main {
                 padding-right: 0;

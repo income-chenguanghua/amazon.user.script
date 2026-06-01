@@ -75,46 +75,48 @@ export function createEditorUI(manager) {
     manager.container.id = 'tm-inline-editor';
     manager.container.innerHTML = `
         <div id="tm-inline-toolbar-panel" class="tm-inline-toolbar-panel">
-            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
-                ${renderToolbarButton({
-                    id: 'tm-edit-toggle',
-                    className: 'tm-inline-btn-primary',
-                    title: '进入编辑模式',
-                    label: '编辑',
-                    icon: 'pencil',
-                    activeIcon: 'check'
-                })}
-            </div>
-            <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
-                ${renderToolbarButton({
-                    id: 'tm-edit-title',
-                    className: 'tm-inline-btn-ghost',
-                    title: '弹窗修改网站标题',
-                    label: '标题',
-                    icon: 'heading'
-                })}
-                ${renderToolbarButton({
-                    id: 'tm-edit-toggle-refund',
-                    className: 'tm-inline-btn-ghost',
-                    title: '显示或隐藏退款总计行',
-                    label: '退款',
-                    icon: 'eye',
-                    activeIcon: 'eyeClosed'
-                })}
-                ${renderToolbarButton({
-                    id: 'tm-edit-reset',
-                    className: 'tm-inline-btn-warning',
-                    title: '删除所有保存的值并刷新页面',
-                    label: '重置',
-                    icon: 'trash'
-                })}
-                ${renderToolbarButton({
-                    id: 'tm-edit-hide',
-                    className: 'tm-inline-btn-ghost',
-                    title: '隐藏编辑按钮',
-                    label: '隐藏',
-                    icon: 'x'
-                })}
+            <div class="tm-inline-toolbar-controls">
+                <div class="tm-inline-toolbar-group tm-inline-toolbar-group-main">
+                    ${renderToolbarButton({
+                        id: 'tm-edit-toggle',
+                        className: 'tm-inline-btn-primary',
+                        title: '进入编辑模式',
+                        label: '编辑',
+                        icon: 'pencil',
+                        activeIcon: 'check'
+                    })}
+                </div>
+                <div class="tm-inline-toolbar-group tm-inline-toolbar-group-actions">
+                    ${renderToolbarButton({
+                        id: 'tm-edit-title',
+                        className: 'tm-inline-btn-ghost',
+                        title: '弹窗修改网站标题',
+                        label: '标题',
+                        icon: 'heading'
+                    })}
+                    ${renderToolbarButton({
+                        id: 'tm-edit-toggle-refund',
+                        className: 'tm-inline-btn-ghost',
+                        title: '显示或隐藏退款总计行',
+                        label: '退款',
+                        icon: 'eye',
+                        activeIcon: 'eyeClosed'
+                    })}
+                    ${renderToolbarButton({
+                        id: 'tm-edit-reset',
+                        className: 'tm-inline-btn-warning',
+                        title: '删除所有保存的值并刷新页面',
+                        label: '重置',
+                        icon: 'trash'
+                    })}
+                    ${renderToolbarButton({
+                        id: 'tm-edit-hide',
+                        className: 'tm-inline-btn-ghost',
+                        title: '隐藏编辑按钮',
+                        label: '隐藏',
+                        icon: 'x'
+                    })}
+                </div>
             </div>
             <span class="tm-inline-version" title="脚本版本" aria-label="脚本版本 ${APP_VERSION}">v${APP_VERSION}</span>
         </div>
