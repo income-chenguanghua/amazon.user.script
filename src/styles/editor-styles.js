@@ -353,6 +353,11 @@ export function injectEditorStyles() {
             background-color: rgba(13, 110, 253, 0.08);
             transition: background-color 0.2s ease, outline-color 0.2s ease;
         }
+        #feature-bullets li > .a-list-item.tm-inline-editing {
+            display: block;
+            box-sizing: border-box;
+            width: 100%;
+        }
         .tm-inline-editing:focus {
             background-color: rgba(13, 110, 253, 0.18);
             outline-color: rgba(25, 135, 84, 0.85);

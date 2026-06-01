@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Amazon 编辑助手（含顶部广告移除）
 // @namespace    http://tampermonkey.net/
-// @version      26.61.1226
+// @version      26.61.1520
 // @author       rirh
 // @description  Inline editing helper for Amazon pages with selector-based persistence, image uploads, and top banner ad removal.
 // @downloadURL  https://raw.githubusercontent.com/income-chenguanghua/amazon.user.script/main/dist/amazon.user.js
@@ -612,7 +612,7 @@
     }
     manager.notification.show("标题恢复失败，请查看控制台。", "error");
   }
-  const version = "26.61.1226";
+  const version = "26.61.1520";
   const packageJson = {
     version
   };
@@ -2932,6 +2932,11 @@
             outline-offset: 2px;
             background-color: rgba(13, 110, 253, 0.08);
             transition: background-color 0.2s ease, outline-color 0.2s ease;
+        }
+        #feature-bullets li > .a-list-item.tm-inline-editing {
+            display: block;
+            box-sizing: border-box;
+            width: 100%;
         }
         .tm-inline-editing:focus {
             background-color: rgba(13, 110, 253, 0.18);
